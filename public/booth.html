@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Capture | Kidversa Studio</title>
+  <link rel="icon" href="icon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --purple: #5c2e8a;
+      --purple-dark: #4a2372;
+      --orange: #f09822;
+      --white: #ffffff;
+      --gray-100: #f5f5f5;
+      --gray-200: #e5e5e5;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+      --shadow: 0 4px 16px rgba(0,0,0,0.06);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+      --shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
+      --radius-sm: 12px;
+      --radius: 16px;
+      --radius-md: 20px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--white);
+      height: 100vh; height: 100dvh;
+      width: 100vw; width: 100dvw;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+    .main-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .screen { display: none; width: 100%; height: 100%; background: var(--white); }
+    .screen.active { display: flex; animation: screenIn 0.3s ease; }
+    @keyframes screenIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .booth-layout {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      background: var(--white);
+      position: relative;
+      flex-direction: column;
+    }
+    @media (orientation: landscape) and (min-width: 768px) {
+      .booth-layout { flex-direction: row; }
+    }
+
+    .back-home-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 50;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: var(--white);
+      border: 2px solid var(--gray-200);
+      border-radius: 50px;
+      color: var(--gray-700);
+      text-decoration: none;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all var(--transition);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+    .back-home-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+    .camera-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      min-width: 0;
+      min-height: 0;
+      padding: 60px 16px 16px;
+      gap: 16px;
+      position: relative;
+    }
+
+    .camera-stage {
+      position: relative;
+      background: #000;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      transition: all var(--transition);
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border: 3px solid var(--gray-200);
+    }
+    .camera-stage.portrait {
+      aspect-ratio: 7.2 / 15;
+      width: auto;
+      height: 100%;
+      max-height: calc(100vh - 220px);
+      max-width: calc((100vh - 220px) * 7.2 / 15);
+    }
+    .camera-stage.landscape {
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      height: auto;
+      max-height: calc(100vh - 220px);
+      max-width: calc((100vh - 220px) * 16 / 9);
+    }
+    .camera-stage.detected { border-color: #10b981; }
+    .camera-stage.cooldown { border-color: var(--orange); }
+
+    video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0; pointer-events: none; }
+    #liveCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+    #frameOverlay { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+    #frameOverlay img { width: 100%; height: 100%; object-fit: fill; }
+
+    .countdown-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center; z-index: 10;
+    }
+    .countdown-number {
+      font-size: clamp(5rem, 15vw, 10rem);
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 0 60px rgba(240,152,34,0.9), 0 0 120px rgba(240,152,34,0.5);
+      animation: countBounce 0.9s ease;
+    }
+    @keyframes countBounce {
+      0% { transform: scale(0.2); opacity: 0; }
+      60% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .capture-btn-inline {
+      display: none;
+      width: 90%;
+      max-width: 400px;
+      padding: 18px 24px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: white;
+      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+      border: none;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.5px;
+      box-shadow: 0 8px 24px rgba(92,46,138,0.3);
+      z-index: 1;
+    }
+    .capture-btn-inline:hover { transform: translateY(-2px); }
+    .capture-btn-inline:active { transform: scale(0.97); }
+    .capture-btn-inline:disabled { opacity: 0.5; cursor: not-allowed; }
+    @media (orientation: portrait) { .capture-btn-inline { display: block; } }
+
+    .sidebar {
+      display: flex;
+      background: var(--white);
+      flex-shrink: 0;
+      overflow-y: auto;
+      border-top: 1px solid var(--gray-200);
+      padding: 12px;
+      max-height: 40vh;
+      gap: 12px;
+      flex-direction: column;
+    }
+    @media (orientation: landscape) and (min-width: 768px) {
+      .sidebar {
+        flex-direction: column;
+        width: 300px;
+        max-height: 100vh;
+        height: 100%;
+        border-top: none;
+        border-left: 1px solid var(--gray-200);
+        padding: 20px 16px;
+        gap: 20px;
+        justify-content: flex-start;
+      }
+    }
+
+    .sidebar-section { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+    .sidebar-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sidebar-label i { color: var(--purple); font-size: 0.7rem; }
+
+    .frame-list-wrapper,
+    .filter-grid-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      display: flex;
+      justify-content: flex-start;
+    }
+    .frame-list { display: flex; gap: 10px; padding: 4px 2px; margin: 0 auto; }
+
+    .frame-item {
+      flex-shrink: 0;
+      width: 72px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--gray-100);
+      overflow: hidden;
+      border: 2px solid var(--gray-200);
+      position: relative;
+      touch-action: manipulation;
+    }
+    .frame-item.portrait { width: 38px; height: 72px; }
+    .frame-item:hover { border-color: var(--purple); transform: translateY(-2px); }
+    .frame-item.active { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(92,46,138,0.2); }
+    .frame-item img { width: 100%; height: 100%; object-fit: cover; }
+    .frame-item.none {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--gray-100);
+      color: var(--gray-500);
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+    .frame-item .badge {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      font-size: 0.5rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-item {
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--transition);
+      position: relative;
+      touch-action: manipulation;
+    }
+    .filter-preview {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid var(--gray-200);
+      transition: all var(--transition);
+      position: relative;
+      background: #000;
+      min-width: 44px;
+      min-height: 44px;
+    }
+    .filter-item:hover .filter-preview { border-color: var(--purple); }
+    .filter-item.active .filter-preview {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(92,46,138,0.2);
+    }
+    .filter-preview video,
+    .filter-preview canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1);
+      pointer-events: none;
+      opacity: 1;
+    }
+    .filter-name {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .filter-item.active .filter-name { color: var(--purple); }
+    .filter-check {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--purple);
+      color: white;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.5rem;
+      z-index: 2;
+    }
+    .filter-item.active .filter-check { display: flex; }
+
+    .capture-btn-sidebar {
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: white;
+      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+      border: none;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.5px;
+      box-shadow: 0 6px 20px rgba(92,46,138,0.3);
+      width: 100%;
+      margin-top: auto;
+    }
+    .capture-btn-sidebar:hover { transform: translateY(-2px); }
+    .capture-btn-sidebar:disabled { opacity: 0.5; cursor: not-allowed; }
+    @media (orientation: portrait) { .capture-btn-sidebar { display: none; } }
+
+    .preview-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      width: 100%;
+      height: 100%;
+      background: var(--white);
+      padding: 20px;
+    }
+    .preview-canvas-wrap {
+      background: var(--gray-100);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-canvas-wrap.portrait {
+      height: 60vh;
+      max-height: 500px;
+      aspect-ratio: 7.2 / 15;
+    }
+    .preview-canvas-wrap.landscape {
+      width: 90%;
+      max-width: 700px;
+      aspect-ratio: 16 / 9;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .action-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .action-btns button {
+      padding: 14px 28px;
+      font-weight: 600;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.9rem;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: all var(--transition);
+      min-width: 120px;
+    }
+    .retake-btn { background: var(--white); color: var(--purple); border: 2px solid var(--purple); }
+    .retake-btn:hover { background: var(--purple); color: white; }
+    .finish-btn { background: var(--purple); color: white; box-shadow: 0 8px 24px rgba(92,46,138,0.3); }
+    .finish-btn:hover { background: var(--purple-dark); }
+
+    .result-layout {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: var(--white);
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .result-card {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      justify-content: center;
+      max-width: 900px;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .result-photo-col {
+      flex-shrink: 0;
+      background: var(--gray-100);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .result-photo-col.portrait {
+      height: 50vh;
+      max-height: 420px;
+      aspect-ratio: 7.2 / 15;
+    }
+    .result-photo-col.landscape {
+      width: 70%;
+      max-width: 500px;
+      aspect-ratio: 16 / 9;
+    }
+    .result-info-col {
+      flex: 1;
+      min-width: 200px;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+    .result-title-row { display: flex; align-items: center; gap: 8px; }
+    .result-logo { width: 28px; height: 28px; border-radius: 50%; object-fit: contain; }
+    .result-info-col h3 { font-size: 1.2rem; font-weight: 700; color: var(--gray-900); }
+
+    .qr-section {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      box-shadow: var(--shadow);
+    }
+    .qr-wrapper {
+      position: relative;
+      display: inline-block;
+      background: white;
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    #qrcode { display: inline-block; padding: 4px; background: white; border-radius: 12px; }
+    #qrcode img, #qrcode canvas {
+      width: 180px !important;
+      height: 180px !important;
+      display: block;
+    }
+    .qr-logo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: white;
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      z-index: 10;
+      object-fit: contain;
+    }
+    .qr-url { font-size: 0.6rem; color: var(--gray-500); word-break: break-all; max-width: 100%; line-height: 1.3; }
+    .result-btns { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; justify-content: center; }
+    .result-btns a, .result-btns button {
+      flex: 1;
+      min-width: 70px;
+      padding: 12px 10px;
+      font-weight: 600;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.8rem;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-booth { background: var(--purple); color: white; }
+    .btn-booth:hover { background: var(--purple-dark); }
+    .btn-home { background: var(--white); color: var(--gray-700); border: 2px solid var(--gray-200); }
+    .btn-home:hover { background: var(--gray-100); }
+
+    .cooldown-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--purple), var(--orange));
+      width: 0%;
+      z-index: 15;
+      opacity: 0;
+      transition: opacity 0.3s, width 0.1s linear;
+    }
+    .cooldown-bar.active { opacity: 1; }
+
+    .init-status {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(0,0,0,0.7);
+      padding: 10px 20px;
+      border-radius: 10px;
+      display: none;
+      z-index: 25;
+    }
+    .init-status.show { display: block; }
+    .init-status .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; }
+    .toast {
+      background: var(--gray-900);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      max-width: 90%;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #065f46; }
+    .toast.error { background: #7f1d1d; }
+
+    @media (orientation: portrait) {
+      .frame-list-wrapper { overflow-x: auto; justify-content: flex-start; }
+      .frame-list { flex-wrap: nowrap; width: max-content; margin: 0 auto; }
+      .filter-grid-wrapper { overflow-x: auto; justify-content: flex-start; }
+      .filter-grid { display: flex; flex-wrap: nowrap; width: max-content; margin: 0 auto; gap: 10px; }
+      .filter-item { flex-shrink: 0; width: 70px; }
+      .filter-name { font-size: 0.55rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+
+  <div class="screen active" id="boothScreen">
+    <div class="booth-layout">
+      <a href="/" class="back-home-btn" id="backHomeBtn">
+        <i class="fas fa-arrow-left"></i>
+        <span>Home</span>
+      </a>
+
+      <div class="camera-area">
+        <div class="camera-stage landscape" id="cameraWrapper">
+          <video id="video" autoplay playsinline></video>
+          <canvas id="liveCanvas"></canvas>
+          <div id="frameOverlay"><img id="frameOverlayImg" src="" alt="" style="display:none;"></div>
+          <div class="countdown-overlay" id="countdownOverlay"><span class="countdown-number" id="countdownNumber">5</span></div>
+          <div class="cooldown-bar" id="cooldownBar"></div>
+          <div class="init-status" id="initStatus">
+            <span class="spinner"></span>
+            <span>Memuat model deteksi tangan...</span>
+          </div>
+        </div>
+        <button class="capture-btn-inline" id="captureBtnInline" onclick="startCountdown()">Capture</button>
+      </div>
+
+      <div class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-label"><i class="fas fa-border-all"></i> <span id="framesLabel">Frames</span></div>
+          <div class="frame-list-wrapper">
+            <div class="frame-list" id="frameList">
+              <div class="frame-item none active landscape" data-frame-id="" data-orientation="landscape" onclick="selectFrame(this,'',null,'landscape')">No</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label"><i class="fas fa-magic"></i> <span id="filterLabel">Filters</span></div>
+          <div class="filter-grid-wrapper">
+            <div class="filter-grid" id="filterGrid"></div>
+          </div>
+        </div>
+
+        <button class="capture-btn-sidebar" id="captureBtnSidebar" onclick="startCountdown()">Capture</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="previewScreen">
+    <div class="preview-layout">
+      <div class="preview-canvas-wrap landscape" id="previewCanvasWrap"><canvas id="canvas"></canvas></div>
+      <div class="action-btns">
+        <button class="retake-btn" onclick="retake()">Retake</button>
+        <button class="finish-btn" onclick="finish()">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="resultScreen">
+    <div class="result-layout">
+      <div class="result-card">
+        <div class="result-photo-col landscape" id="resultPhotoCol"><canvas id="resultCanvas"></canvas></div>
+        <div class="result-info-col">
+          <div class="result-title-row">
+            <img src="icon.png" alt="Logo" class="result-logo" onerror="this.style.display='none'">
+            <h3 id="resultTitle">Your Photo is Ready</h3>
+          </div>
+          <div class="qr-section">
+            <div class="qr-wrapper">
+              <div id="qrcode"></div>
+              <img src="kidversa.png" class="qr-logo" id="qrLogo" alt="Kidversa">
+            </div>
+            <p class="qr-url" id="qrUrlText"></p>
+          </div>
+          <div class="result-btns">
+            <button class="btn-booth" onclick="backToBooth()">New Photo</button>
+            <a href="/" class="btn-home">Home</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  (function() {
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+    }
+
+    const screens = {
+      booth: document.getElementById('boothScreen'),
+      preview: document.getElementById('previewScreen'),
+      result: document.getElementById('resultScreen')
+    };
+    const video = document.getElementById('video');
+    const liveCanvas = document.getElementById('liveCanvas');
+    const liveCtx = liveCanvas.getContext('2d', { willReadFrequently: true });
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const resultCanvas = document.getElementById('resultCanvas');
+    const resultCtx = resultCanvas.getContext('2d');
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const countdownNumber = document.getElementById('countdownNumber');
+    const frameOverlayImg = document.getElementById('frameOverlayImg');
+    const frameList = document.getElementById('frameList');
+    const filterGrid = document.getElementById('filterGrid');
+    const qrContainer = document.getElementById('qrcode');
+    const qrUrlText = document.getElementById('qrUrlText');
+    const captureBtnInline = document.getElementById('captureBtnInline');
+    const captureBtnSidebar = document.getElementById('captureBtnSidebar');
+    const cameraWrapper = document.getElementById('cameraWrapper');
+    const previewCanvasWrap = document.getElementById('previewCanvasWrap');
+    const resultPhotoCol = document.getElementById('resultPhotoCol');
+    const cooldownBar = document.getElementById('cooldownBar');
+    const initStatus = document.getElementById('initStatus');
+    const backHomeBtn = document.getElementById('backHomeBtn');
+
+    const framesLabel = document.getElementById('framesLabel');
+    const filterLabel = document.getElementById('filterLabel');
+    const resultTitle = document.getElementById('resultTitle');
+    const retakeBtn = document.querySelector('.retake-btn');
+    const finishBtn = document.querySelector('.finish-btn');
+
+    let currentFrame = null, currentFrameUrl = null, rawImageData = null, capturedImageData = null,
+      savedPhotoId = null, savedPhotoUrl = null, stream = null, countdownTimer = null,
+      currentFilter = 'none', liveAnimationId = null, mirrorCamera = true;
+    let countdownSeconds = 5;
+    let currentOrientation = 'landscape';
+    const PORTRAIT_RATIO = 7.2 / 15;
+    const LANDSCAPE_RATIO = 16 / 9;
+
+    const filters = [
+      { id: 'none', name: 'Normal', css: 'none' },
+      { id: 'monochrome', name: 'Mono', css: 'grayscale(100%)' },
+      { id: 'sepia', name: 'Sepia', css: 'sepia(100%)' },
+      { id: 'bright', name: 'Bright', css: 'brightness(130%) contrast(110%)' },
+      { id: 'cool', name: 'Cool', css: 'hue-rotate(30deg) saturate(110%)' },
+      { id: 'warm', name: 'Warm', css: 'sepia(30%) saturate(140%) hue-rotate(-10deg)' },
+      { id: 'dramatic', name: 'Drama', css: 'contrast(140%) brightness(90%)' },
+      { id: 'soft', name: 'Soft', css: 'brightness(110%) contrast(90%) saturate(80%)' },
+      { id: 'vivid', name: 'Vivid', css: 'saturate(180%) contrast(110%)' },
+      { id: 'fade', name: 'Fade', css: 'contrast(75%) brightness(115%) saturate(70%)' },
+      { id: 'noir', name: 'Noir', css: 'grayscale(100%) contrast(130%) brightness(90%)' },
+      { id: 'vintage', name: 'Vintage', css: 'sepia(50%) contrast(85%) brightness(110%)' }
+    ];
+
+    const translations = {
+      en: {
+        frames: 'Frames', filter: 'Filters',
+        capture: 'Capture', retake: 'Retake', continue: 'Continue',
+        yourPhotoReady: 'Your Photo is Ready',
+        newPhoto: 'New Photo', home: 'Done',
+        cameraDenied: 'Camera access denied.', cameraNotReady: 'Camera is not ready.'
+      },
+      id: {
+        frames: 'Bingkai', filter: 'Filter',
+        capture: 'Ambil Foto', retake: 'Ulangi', continue: 'Lanjutkan',
+        yourPhotoReady: 'Foto Anda Siap',
+        newPhoto: 'Foto Baru', home: 'Selesai',
+        cameraDenied: 'Akses kamera ditolak.', cameraNotReady: 'Kamera belum siap.'
+      }
+    };
+    let currentLang = 'en';
+
+    function t(key) { return translations[currentLang]?.[key] || translations['en'][key] || key; }
+
+    let audioElements = {};
+    let audioUnlocked = false;
+    let introPlayed = false;
+    let currentAudio = null;
+
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      if (ctx.state === 'suspended') ctx.resume();
+      Object.values(audioElements).forEach(audio => {
+        audio.load();
+        audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+      });
+      audioUnlocked = true;
+    }
+
+    async function getSoundUrl(mappingKey) {
+      try {
+        const [settingsRes, soundsRes] = await Promise.all([
+          fetch('/api/sound-settings'),
+          fetch('/api/sounds')
+        ]);
+        const soundSettings = await settingsRes.json();
+        const sounds = await soundsRes.json();
+        const soundId = soundSettings[mappingKey];
+        if (!soundId) return null;
+        const sound = sounds.find(s => s.id == soundId);
+        if (!sound) return null;
+        return `/sounds/${sound.filename}`;
+      } catch (err) { return null; }
+    }
+
+    function getSoundKey(baseKey) {
+      const suffix = currentLang === 'id' ? '_id' : '';
+      return `sound_${baseKey}_id${suffix}`;
+    }
+
+    async function preloadAudioElement(mappingKey) {
+      const url = await getSoundUrl(mappingKey);
+      if (!url) return;
+      const audio = new Audio(url);
+      audio.volume = 1.0;
+      audio.preload = 'auto';
+      audio.load();
+      audioElements[mappingKey] = audio;
+    }
+
+    function playSound(mappingKey) {
+      const audio = audioElements[mappingKey];
+      if (!audio) return;
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+      }
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 1.0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          setTimeout(() => { audio.currentTime = 0; audio.play().catch(() => {}); }, 100);
+        });
+      }
+      currentAudio = audio;
+    }
+
+    function stopCaptureSound() {
+      if (!currentAudio) return;
+      const captureKey = getSoundKey('capture');
+      const captureAudio = audioElements[captureKey];
+      if (currentAudio === captureAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+      }
+    }
+
+    async function preloadAllSounds() {
+      const keys = [getSoundKey('capture'), getSoundKey('retake'), getSoundKey('print')];
+      const uniqueKeys = [...new Set(keys)];
+      for (const key of uniqueKeys) {
+        await preloadAudioElement(key);
+      }
+    }
+
+    function playCountdownBeep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+      } catch(e) {}
+    }
+
+    function playIntroSound() {
+      if (introPlayed) return;
+      if (!handDetectionReady || !video.videoWidth) {
+        setTimeout(playIntroSound, 500);
+        return;
+      }
+      introPlayed = true;
+      unlockAudio();
+      playSound(getSoundKey('capture'));
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+        if (settings.language && translations[settings.language]) currentLang = settings.language;
+        if (settings.countdown_seconds) countdownSeconds = parseInt(settings.countdown_seconds, 10) || 5;
+        mirrorCamera = settings.mirror_camera !== 'false';
+        if (settings.booth_orientation) currentOrientation = settings.booth_orientation;
+        applyLanguage();
+        updateBackButtonText();
+        updateOrientation(currentOrientation);
+        await preloadAllSounds();
+      } catch (e) { console.error('Failed to load settings:', e); applyLanguage(); }
+    }
+
+    function updateBackButtonText() {
+      if (backHomeBtn) {
+        const span = backHomeBtn.querySelector('span');
+        if (span) span.textContent = t('home');
+      }
+    }
+
+    function updateOrientation(orientation) {
+      currentOrientation = orientation;
+      cameraWrapper.className = 'camera-stage ' + orientation;
+      previewCanvasWrap.className = 'preview-canvas-wrap ' + orientation;
+      resultPhotoCol.className = 'result-photo-col ' + orientation;
+    }
+
+    function applyLanguage() {
+      framesLabel.textContent = t('frames');
+      filterLabel.textContent = t('filter');
+      captureBtnInline.textContent = t('capture');
+      captureBtnSidebar.textContent = t('capture');
+      if (retakeBtn) retakeBtn.textContent = t('retake');
+      if (finishBtn) finishBtn.textContent = t('continue');
+      if (resultTitle) resultTitle.textContent = t('yourPhotoReady');
+      updateBackButtonText();
+      const homeBtn = document.querySelector('.btn-home');
+      if (homeBtn) homeBtn.textContent = t('home');
+      const newPhotoBtn = document.querySelector('.btn-booth');
+      if (newPhotoBtn) newPhotoBtn.textContent = t('newPhoto');
+    }
+
+    function disableCapture() { captureBtnInline.disabled = true; captureBtnSidebar.disabled = true; }
+    function enableCapture() { captureBtnInline.disabled = false; captureBtnSidebar.disabled = false; }
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+      if (name === 'booth') {
+        startLivePreview();
+        startHandDetection();
+      } else {
+        stopLivePreview();
+        stopHandDetection();
+      }
+      if (name === 'result') applyLanguage();
+    }
+
+    async function initCamera() {
+      try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        const targetRatio = currentOrientation === 'landscape' ? LANDSCAPE_RATIO : PORTRAIT_RATIO;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: currentOrientation === 'landscape' ? 1280 : 480 },
+            height: { ideal: currentOrientation === 'landscape' ? 720 : 1000 },
+            aspectRatio: { ideal: targetRatio }
+          }
+        });
+        video.srcObject = stream;
+        await video.play();
+        startLivePreview();
+        updateFilterPreviews();
+        setTimeout(() => startHandDetection(), 300);
+      } catch (err) { showToast(t('cameraDenied'), 'error'); }
+    }
+
+    function applyFilterToImageData(imageData, filterType) {
+      const data = imageData.data;
+      switch(filterType) {
+        case 'monochrome':
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+            data[i] = data[i+1] = data[i+2] = gray;
+          }
+          break;
+        case 'sepia':
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            data[i] = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189);
+            data[i+1] = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168);
+            data[i+2] = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131);
+          }
+          break;
+        case 'vintage':
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+            data[i] = Math.min(255, gray * 0.8 + 50);
+            data[i+1] = Math.min(255, gray * 0.7 + 40);
+            data[i+2] = Math.min(255, gray * 0.6 + 30);
+          }
+          break;
+        case 'bright':
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, data[i] * 1.3);
+            data[i+1] = Math.min(255, data[i+1] * 1.3);
+            data[i+2] = Math.min(255, data[i+2] * 1.3);
+          }
+          break;
+        case 'cool':
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, data[i] * 0.9);
+            data[i+1] = Math.min(255, data[i+1] * 1.05);
+            data[i+2] = Math.min(255, data[i+2] * 1.2);
+          }
+          break;
+        case 'warm':
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, data[i] * 1.15);
+            data[i+1] = Math.min(255, data[i+1] * 1.05);
+            data[i+2] = Math.min(255, data[i+2] * 0.9);
+          }
+          break;
+        case 'dramatic':
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.max(0, Math.min(255, (data[i] - 128) * 1.4 + 128));
+            data[i+1] = Math.max(0, Math.min(255, (data[i+1] - 128) * 1.4 + 128));
+            data[i+2] = Math.max(0, Math.min(255, (data[i+2] - 128) * 1.4 + 128));
+          }
+          break;
+        case 'soft':
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, data[i] * 1.1);
+            data[i+1] = Math.min(255, data[i+1] * 1.1);
+            data[i+2] = Math.min(255, data[i+2] * 1.1);
+          }
+          break;
+        case 'vivid':
+          for (let i = 0; i < data.length; i += 4) {
+            const max = Math.max(data[i], data[i+1], data[i+2]);
+            const min = Math.min(data[i], data[i+1], data[i+2]);
+            const saturation = (max - min) / 255 * 1.8;
+            const gray = (max + min) / 2;
+            data[i] = Math.min(255, gray + (data[i] - gray) * (1 + saturation));
+            data[i+1] = Math.min(255, gray + (data[i+1] - gray) * (1 + saturation));
+            data[i+2] = Math.min(255, gray + (data[i+2] - gray) * (1 + saturation));
+          }
+          break;
+        case 'fade':
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, data[i] * 0.75 + 40);
+            data[i+1] = Math.min(255, data[i+1] * 0.75 + 40);
+            data[i+2] = Math.min(255, data[i+2] * 0.75 + 40);
+          }
+          break;
+        case 'noir':
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+            const contrast = (gray - 128) * 1.3 + 128;
+            data[i] = data[i+1] = data[i+2] = Math.max(0, Math.min(255, contrast));
+          }
+          break;
+      }
+      return imageData;
+    }
+
+    function getCropDimensions(srcW, srcH) {
+      const containerRatio = currentOrientation === 'landscape' ? LANDSCAPE_RATIO : PORTRAIT_RATIO;
+      let cropW, cropH, startX, startY;
+      if (srcW / srcH > containerRatio) {
+        cropH = srcH;
+        cropW = Math.round(srcH * containerRatio);
+        startY = 0;
+        startX = Math.round((srcW - cropW) / 2);
+      } else {
+        cropW = srcW;
+        cropH = Math.round(srcW / containerRatio);
+        startX = 0;
+        startY = Math.round((srcH - cropH) / 2);
+      }
+      if (cropW % 2 !== 0) cropW--;
+      if (cropH % 2 !== 0) cropH--;
+      return { cropW, cropH, startX, startY };
+    }
+
+    function startLivePreview() {
+      if (liveAnimationId) cancelAnimationFrame(liveAnimationId);
+      if (!video.videoWidth) { liveAnimationId = requestAnimationFrame(startLivePreview); return; }
+      const containerWidth = cameraWrapper.clientWidth;
+      const containerHeight = cameraWrapper.clientHeight;
+      if (containerWidth === 0 || containerHeight === 0) { liveAnimationId = requestAnimationFrame(startLivePreview); return; }
+      liveCanvas.width = containerWidth;
+      liveCanvas.height = containerHeight;
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const { cropW, cropH, startX, startY } = getCropDimensions(vw, vh);
+      liveCtx.clearRect(0, 0, containerWidth, containerHeight);
+      liveCtx.save();
+      if (mirrorCamera) {
+        liveCtx.translate(containerWidth, 0);
+        liveCtx.scale(-1, 1);
+      }
+      liveCtx.drawImage(video, startX, startY, cropW, cropH, 0, 0, containerWidth, containerHeight);
+      liveCtx.restore();
+      if (currentFilter !== 'none') {
+        const imageData = liveCtx.getImageData(0, 0, containerWidth, containerHeight);
+        applyFilterToImageData(imageData, currentFilter);
+        liveCtx.putImageData(imageData, 0, 0);
+      }
+      liveAnimationId = requestAnimationFrame(startLivePreview);
+    }
+
+    function stopLivePreview() { if (liveAnimationId) { cancelAnimationFrame(liveAnimationId); liveAnimationId = null; } }
+
+    function loadFilters() {
+      filterGrid.innerHTML = '';
+      filters.forEach(filter => {
+        const item = document.createElement('div');
+        item.className = 'filter-item' + (filter.id === 'none' ? ' active' : '');
+        item.dataset.filter = filter.id;
+        item.onclick = () => setFilter(filter.id, item);
+
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'filter-preview';
+        previewDiv.style.filter = filter.css;
+
+        const previewVideo = document.createElement('video');
+        previewVideo.autoplay = true;
+        previewVideo.muted = true;
+        previewVideo.playsInline = true;
+        previewVideo.setAttribute('muted', '');
+        previewVideo.setAttribute('playsinline', '');
+        previewVideo.style.filter = filter.css;
+        previewDiv.appendChild(previewVideo);
+
+        const check = document.createElement('div');
+        check.className = 'filter-check';
+        check.innerHTML = '<i class="fas fa-check"></i>';
+        previewDiv.appendChild(check);
+
+        const name = document.createElement('div');
+        name.className = 'filter-name';
+        name.textContent = filter.name;
+
+        item.appendChild(previewDiv);
+        item.appendChild(name);
+        filterGrid.appendChild(item);
+        item._previewVideo = previewVideo;
+      });
+    }
+
+    function updateFilterPreviews() {
+      if (!stream) return;
+      document.querySelectorAll('.filter-item').forEach(item => {
+        const previewVideo = item._previewVideo;
+        if (previewVideo) {
+          if (previewVideo.srcObject !== stream) {
+            previewVideo.srcObject = stream;
+            previewVideo.muted = true;
+            previewVideo.setAttribute('muted', '');
+            previewVideo.setAttribute('playsinline', '');
+          }
+          if (previewVideo.paused) {
+            previewVideo.play().catch(() => {});
+          }
+        }
+      });
+    }
+
+    window.setFilter = function(filter, el) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-item').forEach(item => item.classList.remove('active'));
+      el.classList.add('active');
+    };
+
+    async function loadFrames() {
+      try {
+        const res = await fetch('/api/frames');
+        const frames = await res.json();
+        const activeFrames = frames.filter(f => f.active === 1);
+        const portraitFrames = activeFrames.filter(f => f.orientation === 'portrait');
+        const landscapeFrames = activeFrames.filter(f => f.orientation === 'landscape');
+
+        frameList.innerHTML = `
+          <div class="frame-item none active landscape" data-frame-id="" data-orientation="landscape" onclick="selectFrame(this,'',null,'landscape')">No</div>
+          <div class="frame-item none portrait" data-frame-id="" data-orientation="portrait" onclick="selectFrame(this,'',null,'portrait')">No</div>
+        `;
+
+        [...landscapeFrames, ...portraitFrames].forEach(frame => {
+          const div = document.createElement('div');
+          div.className = 'frame-item ' + frame.orientation;
+          div.dataset.frameId = frame.id;
+          div.dataset.orientation = frame.orientation;
+          div.onclick = () => selectFrame(div, frame.id, `/frames/${frame.filename}`, frame.orientation);
+          div.innerHTML = `<img src="/frames/${frame.filename}" alt="${frame.name}"><span class="badge">${frame.orientation === 'landscape' ? '16:9' : '7:15'}</span>`;
+          frameList.appendChild(div);
+        });
+      } catch (err) { console.error(err); }
+    }
+
+    window.selectFrame = function(el, id, url, orientation) {
+      document.querySelectorAll('.frame-item').forEach(i => i.classList.remove('active'));
+      el.classList.add('active');
+      updateOrientation(orientation);
+
+      if (url) {
+        currentFrameUrl = url;
+        frameOverlayImg.src = url;
+        frameOverlayImg.style.display = 'block';
+        const img = new Image();
+        img.src = url;
+        img.onload = () => { currentFrame = img; };
+      } else {
+        currentFrame = null;
+        currentFrameUrl = null;
+        frameOverlayImg.src = '';
+        frameOverlayImg.style.display = 'none';
+      }
+    };
+
+    window.startCountdown = function() {
+      if (!video.videoWidth) { showToast(t('cameraNotReady'), 'error'); return; }
+      if (countdownTimer) return;
+      unlockAudio();
+      handDetectionActive = false;
+      updateDetectionVisual('cooldown');
+      disableCapture();
+      let count = countdownSeconds;
+      countdownOverlay.style.display = 'flex';
+      countdownNumber.textContent = count;
+      countdownNumber.style.animation = 'none';
+      void countdownNumber.offsetWidth;
+      countdownNumber.style.animation = 'countBounce 0.9s ease';
+      stopCaptureSound();
+      playCountdownBeep();
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        count--;
+        if (count <= 0) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          countdownOverlay.style.display = 'none';
+          captureImage();
+          enableCapture();
+          handDetectionActive = true;
+          detectionFrameCount = 0;
+          handDetectedFlag = false;
+          updateDetectionVisual('idle');
+        } else {
+          countdownNumber.textContent = count;
+          countdownNumber.style.animation = 'none';
+          void countdownNumber.offsetWidth;
+          countdownNumber.style.animation = 'countBounce 0.9s ease';
+          playCountdownBeep();
+        }
+      }, 1000);
+    };
+
+    function captureImage() {
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const { cropW, cropH, startX, startY } = getCropDimensions(vw, vh);
+      const rawCanvas = document.createElement('canvas');
+      rawCanvas.width = cropW;
+      rawCanvas.height = cropH;
+      const rawCtx = rawCanvas.getContext('2d');
+      rawCtx.save();
+      if (mirrorCamera) {
+        rawCtx.translate(cropW, 0);
+        rawCtx.scale(-1, 1);
+      }
+      rawCtx.drawImage(video, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+      rawCtx.restore();
+      if (currentFilter !== 'none') {
+        const imgData = rawCtx.getImageData(0, 0, cropW, cropH);
+        applyFilterToImageData(imgData, currentFilter);
+        rawCtx.putImageData(imgData, 0, 0);
+      }
+      rawImageData = rawCanvas.toDataURL('image/png', 1.0);
+      canvas.width = cropW;
+      canvas.height = cropH;
+      ctx.clearRect(0, 0, cropW, cropH);
+      ctx.drawImage(rawCanvas, 0, 0);
+      if (currentFrame) ctx.drawImage(currentFrame, 0, 0, cropW, cropH);
+      capturedImageData = canvas.toDataURL('image/png', 1.0);
+      showScreen('preview');
+      setTimeout(() => { playSound(getSoundKey('retake')); }, 400);
+      saveToServer(capturedImageData);
+    }
+
+    async function saveToServer(imageData) {
+      const activeFrame = document.querySelector('.frame-item.active');
+      const frameId = activeFrame ? activeFrame.dataset.frameId || null : null;
+      try {
+        const res = await fetch('/api/photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageData, frame_id: frameId, orientation: currentOrientation })
+        });
+        const data = await res.json();
+        savedPhotoId = data.id;
+        savedPhotoUrl = data.url;
+      } catch (err) { console.error(err); }
+    }
+
+    window.retake = async function() {
+      playSound(getSoundKey('retake'));
+      if (savedPhotoId) try { await fetch(`/api/photos/${savedPhotoId}`, { method: 'DELETE' }); } catch (e) {}
+      capturedImageData = rawImageData = savedPhotoUrl = null;
+      savedPhotoId = null;
+      countdownOverlay.style.display = 'none';
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      handDetectionActive = true;
+      detectionFrameCount = 0;
+      handDetectedFlag = false;
+      updateDetectionVisual('idle');
+      introPlayed = false;
+      showScreen('booth');
+      setTimeout(() => playIntroSound(), 800);
+    };
+
+    function generateQRCode(downloadUrl) {
+      const qrContainer = document.getElementById('qrcode');
+      qrContainer.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        try {
+          new QRCode(qrContainer, {
+            text: downloadUrl,
+            width: 180,
+            height: 180,
+            colorDark: '#5c2e8a',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+          setTimeout(() => {
+            const qrLogo = document.getElementById('qrLogo');
+            if (qrLogo) qrLogo.style.display = 'block';
+          }, 300);
+        } catch (e) {
+          fallbackQRCode(downloadUrl);
+        }
+      } else {
+        fallbackQRCode(downloadUrl);
+      }
+    }
+
+    function fallbackQRCode(downloadUrl) {
+      const qrContainer = document.getElementById('qrcode');
+      qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(downloadUrl)}" alt="QR Code" width="180" height="180" />`;
+      const qrLogo = document.getElementById('qrLogo');
+      if (qrLogo) qrLogo.style.display = 'block';
+    }
+
+    function playConfettiSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        const freqs = [880, 1100, 1320, 1760];
+        freqs.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const start = now + i * 0.08;
+          gain.gain.setValueAtTime(0.2, start);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+          osc.start(start);
+          osc.stop(start + 0.15);
+        });
+      } catch(e) {}
+    }
+
+    function triggerConfetti() {
+      confetti({ particleCount: 30, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+      confetti({ particleCount: 30, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+      playConfettiSound();
+    }
+
+    window.finish = function() {
+      playSound(getSoundKey('print'));
+      showScreen('result');
+      triggerConfetti();
+      if (rawImageData) {
+        const img = new Image();
+        img.src = rawImageData;
+        img.onload = () => {
+          resultCanvas.width = img.width;
+          resultCanvas.height = img.height;
+          resultCtx.clearRect(0, 0, img.width, img.height);
+          resultCtx.drawImage(img, 0, 0);
+          if (currentFrame) resultCtx.drawImage(currentFrame, 0, 0, img.width, img.height);
+        };
+      }
+      if (savedPhotoUrl) {
+        const filename = savedPhotoUrl.split('/').pop();
+        const downloadUrl = window.location.origin + '/download/' + filename;
+        setTimeout(() => {
+          generateQRCode(downloadUrl);
+          qrUrlText.textContent = downloadUrl;
+        }, 100);
+      }
+    };
+
+    window.backToBooth = function() {
+      capturedImageData = null;
+      rawImageData = null;
+      handDetectionActive = true;
+      detectionFrameCount = 0;
+      handDetectedFlag = false;
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      countdownOverlay.style.display = 'none';
+      updateDetectionVisual('idle');
+      introPlayed = false;
+      showScreen('booth');
+      setTimeout(() => playIntroSound(), 800);
+    };
+
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+
+    function updateDetectionVisual(state) {
+      cameraWrapper.classList.remove('detected', 'cooldown');
+      if (state === 'detected') cameraWrapper.classList.add('detected');
+      else if (state === 'cooldown') cameraWrapper.classList.add('cooldown');
+      if (state === 'loading') initStatus.classList.add('show');
+      else initStatus.classList.remove('show');
+      cooldownBar.classList.toggle('active', state === 'cooldown');
+    }
+
+    let handDetectionActive = true, handDetectedFlag = false, detectionFrameCount = 0;
+    const REQUIRED_FRAMES = 3;
+    let detectInterval = null, handsInstance = null, lastFingerCount = 0;
+    let handDetectionReady = false, initAttempts = 0;
+    const MAX_INIT_ATTEMPTS = 10;
+
+    function loadHandsScript() {
+      return new Promise((resolve, reject) => {
+        if (typeof Hands !== 'undefined') { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+        script.crossOrigin = 'anonymous';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load MediaPipe Hands'));
+        document.head.appendChild(script);
+      });
+    }
+
+    function initHandDetection() {
+      if (typeof Hands === 'undefined') {
+        if (initAttempts < MAX_INIT_ATTEMPTS) { initAttempts++; setTimeout(initHandDetection, 500); }
+        else { console.error('MediaPipe Hands failed to load'); updateDetectionVisual('error'); }
+        return;
+      }
+      try {
+        handsInstance = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+        handsInstance.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.75,
+          minTrackingConfidence: 0.65
+        });
+        handsInstance.onResults(onHandResults);
+        handsInstance.initialize().then(() => {
+          console.log('MediaPipe Hands initialized successfully');
+          handDetectionReady = true;
+          updateDetectionVisual('idle');
+          if (video.readyState >= 2) startHandDetection();
+        }).catch((err) => { console.error('Failed to initialize Hands:', err); updateDetectionVisual('error'); });
+      } catch (err) { console.error('Failed to create Hands instance:', err); updateDetectionVisual('error'); }
+    }
+
+    function distance(a, b) {
+      return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+    }
+
+    function isFingerFullyExtended(landmarks, tipIdx, pipIdx, mcpIdx) {
+      const wrist = landmarks[0];
+      const tip = landmarks[tipIdx];
+      const pip = landmarks[pipIdx];
+      const mcp = landmarks[mcpIdx];
+
+      const tipDist = distance(wrist, tip);
+      const pipDist = distance(wrist, pip);
+      const mcpDist = distance(wrist, mcp);
+      const distCheck = tipDist > pipDist * 1.15 && tipDist > mcpDist * 0.95;
+
+      const v1 = { x: mcp.x - pip.x, y: mcp.y - pip.y };
+      const v2 = { x: tip.x - pip.x, y: tip.y - pip.y };
+      const dot = v1.x * v2.x + v1.y * v2.y;
+      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+      if (mag1 < 0.001 || mag2 < 0.001) return false;
+      const cosAngle = dot / (mag1 * mag2);
+      const angleCheck = cosAngle < -0.3;
+
+      const yCheck = tip.y < pip.y;
+
+      let votes = 0;
+      if (distCheck) votes++;
+      if (angleCheck) votes++;
+      if (yCheck) votes++;
+      return votes >= 2;
+    }
+
+    function isThumbFullyExtended(landmarks) {
+      const wrist = landmarks[0];
+      const thumbTip = landmarks[4];
+      const thumbIP = landmarks[3];
+      const thumbMCP = landmarks[2];
+
+      const tipDist = distance(wrist, thumbTip);
+      const ipDist = distance(wrist, thumbIP);
+      const mcpDist = distance(wrist, thumbMCP);
+      const distCheck = tipDist > ipDist * 1.1 && tipDist > mcpDist * 0.9;
+
+      const v1 = { x: thumbMCP.x - thumbIP.x, y: thumbMCP.y - thumbIP.y };
+      const v2 = { x: thumbTip.x - thumbIP.x, y: thumbTip.y - thumbIP.y };
+      const dot = v1.x * v2.x + v1.y * v2.y;
+      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+      if (mag1 < 0.001 || mag2 < 0.001) return false;
+      const cosAngle = dot / (mag1 * mag2);
+      const angleCheck = cosAngle < -0.2;
+
+      return distCheck || angleCheck;
+    }
+
+    function onHandResults(results) {
+      if (!handDetectionActive || countdownTimer || !handDetectionReady) return;
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+
+        const indexExtended = isFingerFullyExtended(landmarks, 8, 6, 5);
+        const middleExtended = isFingerFullyExtended(landmarks, 12, 10, 9);
+        const ringExtended = isFingerFullyExtended(landmarks, 16, 14, 13);
+        const pinkyExtended = isFingerFullyExtended(landmarks, 20, 18, 17);
+        const thumbExtended = isThumbFullyExtended(landmarks);
+
+        let openCount = 0;
+        if (indexExtended) openCount++;
+        if (middleExtended) openCount++;
+        if (ringExtended) openCount++;
+        if (pinkyExtended) openCount++;
+        if (thumbExtended) openCount++;
+
+        if (openCount === 5) {
+          detectionFrameCount++;
+          if (detectionFrameCount >= REQUIRED_FRAMES && !handDetectedFlag) {
+            handDetectedFlag = true;
+            handDetectionActive = false;
+            updateDetectionVisual('detected');
+            startCountdown();
+            setTimeout(() => {
+              handDetectionActive = true;
+              detectionFrameCount = 0;
+              handDetectedFlag = false;
+              if (!countdownTimer) updateDetectionVisual('idle');
+            }, 4000);
+          }
+        } else {
+          detectionFrameCount = Math.max(0, detectionFrameCount - 1);
+          handDetectedFlag = false;
+        }
+      } else {
+        detectionFrameCount = Math.max(0, detectionFrameCount - 2);
+        handDetectedFlag = false;
+      }
+    }
+
+    function startHandDetection() {
+      if (!handDetectionReady) { if (!handsInstance) initHandDetection(); return; }
+      if (detectInterval) return;
+      if (video.readyState < 2) { setTimeout(startHandDetection, 200); return; }
+      detectInterval = setInterval(() => {
+        if (video.readyState >= 2 && !video.paused && !video.ended && handDetectionActive && handDetectionReady) {
+          try { handsInstance.send({ image: video }); } catch(err) {}
+        }
+      }, 60);
+    }
+
+    function stopHandDetection() {
+      if (detectInterval) { clearInterval(detectInterval); detectInterval = null; }
+      detectionFrameCount = 0;
+      handDetectedFlag = false;
+    }
+
+    updateDetectionVisual('loading');
+    loadFilters();
+
+    loadSettings().then(() => {
+      initCamera();
+      loadFrames();
+      loadHandsScript().then(() => {
+        initHandDetection();
+      }).catch(() => {
+        updateDetectionVisual('error');
+      });
+
+      const waitForReady = setInterval(() => {
+        if (video.videoWidth > 0 && handDetectionReady) {
+          clearInterval(waitForReady);
+          playIntroSound();
+        }
+      }, 300);
+      setTimeout(() => {
+        clearInterval(waitForReady);
+        if (!introPlayed) playIntroSound();
+      }, 5000);
+    });
+
+    video.addEventListener('loadeddata', () => {
+      if (handDetectionReady) startHandDetection();
+      updateFilterPreviews();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && screens.booth.classList.contains('active')) {
+        if (handDetectionReady && !detectInterval) startHandDetection();
+      }
+    });
+
+    window.addEventListener('error', (e) => {
+      if (e.message && e.message.includes('Hands')) {
+        console.warn('Hand detection error, retrying...');
+        if (!handsInstance) initHandDetection();
+      }
+    });
+
+  })();
+</script>
+</body>
+</html>

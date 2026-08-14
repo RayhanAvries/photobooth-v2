@@ -1,0 +1,17 @@
+{
+  "name": "kidversa-studio",
+  "version": "1.0.0",
+  "description": "Kidversa Studio Photo Booth",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.2",
+    "uuid": "^9.0.0"
+  }
+}

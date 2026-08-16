@@ -100,7 +100,6 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ==================== SOUNDS ====================
 app.get('/api/sounds', (req, res) => {
   const sounds = db.prepare('SELECT * FROM sounds ORDER BY category, created_at DESC').all();
   res.json(sounds);
@@ -133,7 +132,6 @@ app.get('/api/sound-settings', (req, res) => {
   res.json(soundSettings);
 });
 
-// ==================== BACKGROUND MUSIC ====================
 app.post('/api/background-music', upload.single('music'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Audio file required' });
   const filename = req.file.filename;
@@ -162,7 +160,6 @@ app.delete('/api/background-music', (req, res) => {
   }
 });
 
-// ==================== FRAMES ====================
 app.get('/api/frames', (req, res) => {
   const frames = db.prepare('SELECT * FROM frames ORDER BY created_at DESC').all();
   res.json(frames);
@@ -197,18 +194,15 @@ app.delete('/api/frames/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== PHOTOS ====================
-app.post('/api/photos', express.json({ limit: '20mb' }), (req, res) => {
-  const { image, frame_id, orientation } = req.body;
-  if (!image) return res.status(400).json({ error: 'Image data missing' });
-  const matches = image.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
-  if (!matches) return res.status(400).json({ error: 'Invalid data URL format' });
-  const ext = matches[1] === 'jpeg' ? 'jpg' : 'png';
-  const base64Data = matches[2];
-  const filename = uuidv4() + '.' + ext;
-  const filePath = path.join('public/photos', filename);
-  fs.writeFileSync(filePath, base64Data, 'base64');
-  const info = db.prepare('INSERT INTO photos (frame_id, filename, orientation) VALUES (?, ?, ?)').run(frame_id || null, filename, orientation || 'landscape');
+app.post('/api/photos', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Image file required' });
+  const { frame_id, orientation } = req.body;
+  const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+  const filename = uuidv4() + ext;
+  const destPath = path.join('public/photos', filename);
+  fs.renameSync(req.file.path, destPath);
+  const info = db.prepare('INSERT INTO photos (frame_id, filename, orientation) VALUES (?, ?, ?)')
+    .run(frame_id || null, filename, orientation || 'landscape');
   res.json({ id: info.lastInsertRowid, filename, url: `/photos/${filename}` });
 });
 
@@ -270,13 +264,10 @@ app.get('/api/photos/dates', (req, res) => {
   res.json(dates);
 });
 
-// ==================== DOWNLOAD & PAGE ====================
-// Halaman download.html
 app.get('/download/:filename', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'download.html'));
 });
 
-// Endpoint untuk mengunduh file foto
 app.get('/api/download/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(__dirname, 'public', 'photos', filename);
@@ -286,7 +277,6 @@ app.get('/api/download/:filename', (req, res) => {
   res.download(filePath, `Kidversa_Studio_${filename}`);
 });
 
-// ==================== SETTINGS ====================
 app.get('/api/settings', (req, res) => {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const settings = {};
@@ -301,12 +291,10 @@ app.post('/api/settings', (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== STATIC PAGES ====================
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/booth', (req, res) => res.sendFile(path.join(__dirname, 'public', 'booth.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
-// ==================== ERROR HANDLER ====================
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'File too large (max 10MB)' });

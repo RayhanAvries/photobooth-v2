@@ -1259,24 +1259,35 @@
       ctx.drawImage(rawCanvas, 0, 0);
       if (currentFrame) ctx.drawImage(currentFrame, 0, 0, cropW, cropH);
       capturedImageData = canvas.toDataURL('image/png', 1.0);
+      canvas.toBlob((blob) => {
+        saveToServer(blob);
+      }, 'image/jpeg', 0.85);
       showScreen('preview');
       setTimeout(() => { playSound(getSoundKey('retake')); }, 400);
-      saveToServer(capturedImageData);
     }
 
-    async function saveToServer(imageData) {
+    async function saveToServer(imageBlob) {
       const activeFrame = document.querySelector('.frame-item.active');
       const frameId = activeFrame ? activeFrame.dataset.frameId || null : null;
+
+      const formData = new FormData();
+      formData.append('image', imageBlob, 'photo.jpg');
+      formData.append('frame_id', frameId || '');
+      formData.append('orientation', currentOrientation);
+
       try {
         const res = await fetch('/api/photos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageData, frame_id: frameId, orientation: currentOrientation })
+          body: formData
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
         savedPhotoId = data.id;
         savedPhotoUrl = data.url;
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error('Save photo error:', err);
+        showToast('Gagal menyimpan foto', 'error');
+      }
     }
 
     window.retake = async function() {

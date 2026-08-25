@@ -56,6 +56,8 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('instagram_url', 'https://instagram.com/kidversa');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('website_url', 'https://kidversa.fun');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('booth_orientation', 'landscape');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('enable_landscape', 'true');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('enable_portrait', 'true');
 `);
 
 const tableInfo = db.prepare("PRAGMA table_info(frames)").all();

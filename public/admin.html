@@ -259,6 +259,28 @@
 
         <hr class="settings-divider">
 
+        <h4>Orientation Availability</h4>
+        <div class="setting-row">
+          <label>Enable Landscape:</label>
+          <label class="switch-compact">
+            <input type="checkbox" id="enableLandscapeToggle" onchange="handleOrientationToggle('enable_landscape', this.checked)">
+            <span class="slider"></span>
+            <span class="label-text"><span class="off">Off</span><span class="on">On</span></span>
+          </label>
+          <span class="save-indicator" id="saveEnableLandscapeIndicator">Saved!</span>
+        </div>
+        <div class="setting-row">
+          <label>Enable Portrait:</label>
+          <label class="switch-compact">
+            <input type="checkbox" id="enablePortraitToggle" onchange="handleOrientationToggle('enable_portrait', this.checked)">
+            <span class="slider"></span>
+            <span class="label-text"><span class="off">Off</span><span class="on">On</span></span>
+          </label>
+          <span class="save-indicator" id="saveEnablePortraitIndicator">Saved!</span>
+        </div>
+
+        <hr class="settings-divider">
+
         <h4>Countdown Timer</h4>
         <div class="setting-row">
           <label for="countdownSelect">Countdown (seconds):</label>
@@ -408,6 +430,15 @@
 
     async function handleHandDetectionToggle(checked) {
       await saveSetting('hand_detection', checked ? 'true' : 'false');
+    }
+
+    async function handleOrientationToggle(key, checked) {
+      await saveSetting(key, checked ? 'true' : 'false');
+      const indicator = document.getElementById(`save${key.charAt(0).toUpperCase() + key.slice(1)}Indicator`);
+      if (indicator) {
+        indicator.classList.add('show');
+        setTimeout(() => indicator.classList.remove('show'), 2000);
+      }
     }
 
     function switchTab(tab) {
@@ -646,12 +677,16 @@
         const handDetectionToggle = document.getElementById('handDetectionToggle'); handDetectionToggle.checked = settings.hand_detection !== 'false';
         document.getElementById('instagramUrl').value = settings.instagram_url || 'https://instagram.com/kidversa';
         document.getElementById('websiteUrl').value = settings.website_url || 'https://kidversa.fun';
+        const enableLandscapeToggle = document.getElementById('enableLandscapeToggle');
+        enableLandscapeToggle.checked = settings.enable_landscape !== 'false';
+        const enablePortraitToggle = document.getElementById('enablePortraitToggle');
+        enablePortraitToggle.checked = settings.enable_portrait !== 'false';
         updateAdminPreviewOrientation();
       } catch (e) { console.error(e); }
     }
 
     async function saveSetting(key, value) {
-      const indicatorMap = { 'language': 'saveLangIndicator', 'booth_orientation': 'saveOrientationIndicator', 'countdown_seconds': 'saveCountdownIndicator', 'mirror_camera': 'saveMirrorIndicator', 'hand_detection': 'saveHandDetectionIndicator', 'instagram_url': 'saveInstagramIndicator', 'website_url': 'saveWebsiteIndicator' };
+      const indicatorMap = { 'language': 'saveLangIndicator', 'booth_orientation': 'saveOrientationIndicator', 'countdown_seconds': 'saveCountdownIndicator', 'mirror_camera': 'saveMirrorIndicator', 'hand_detection': 'saveHandDetectionIndicator', 'instagram_url': 'saveInstagramIndicator', 'website_url': 'saveWebsiteIndicator', 'enable_landscape': 'saveEnableLandscapeIndicator', 'enable_portrait': 'saveEnablePortraitIndicator' };
       const indicator = document.getElementById(indicatorMap[key]);
       try {
         await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value }) });

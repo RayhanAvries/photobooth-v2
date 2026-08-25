@@ -14,6 +14,7 @@
       --purple: #5c2e8a;
       --purple-dark: #4a2372;
       --orange: #f09822;
+      --orange-dark: #d17c15;
       --white: #ffffff;
       --gray-100: #f5f5f5;
       --gray-200: #e5e5e5;
@@ -509,6 +510,54 @@
     .btn-home { background: var(--white); color: var(--gray-700); border: 2px solid var(--gray-200); }
     .btn-home:hover { background: var(--gray-100); }
 
+    .btn-print {
+      background: var(--orange);
+      color: white;
+      box-shadow: 0 6px 20px rgba(240,152,34,0.3);
+    }
+    .btn-print:hover {
+      background: var(--orange-dark);
+      box-shadow: 0 10px 30px rgba(240,152,34,0.4);
+    }
+    .btn-print:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .brightness-section {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 100%;
+    }
+    .brightness-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: var(--gray-700);
+      font-size: 0.8rem;
+    }
+    .brightness-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #d1d5db, var(--orange));
+      outline: none;
+    }
+    .brightness-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      border: 3px solid var(--orange);
+    }
+
     .cooldown-bar {
       position: absolute;
       bottom: 0;
@@ -577,6 +626,59 @@
       .filter-grid { display: flex; flex-wrap: nowrap; width: max-content; margin: 0 auto; gap: 10px; }
       .filter-item { flex-shrink: 0; width: 70px; }
       .filter-name { font-size: 0.55rem; }
+    }
+
+    @page {
+      size: 72mm 150mm;
+      margin: 0;
+    }
+    @media print {
+      html, body {
+        width: 72mm !important;
+        height: 149.5mm !important; 
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: white !important;
+        box-sizing: border-box !important;
+      }
+      
+      body > *:not(#printArea) {
+        display: none !important;
+      }
+      
+      #printArea {
+        display: block !important; 
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 72mm !important;
+        height: 149.5mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      #printArea img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: fill !important; 
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
     }
   </style>
 </head>
@@ -653,7 +755,19 @@
             </div>
             <p class="qr-url" id="qrUrlText"></p>
           </div>
+
+          <div class="brightness-section">
+            <div class="brightness-label">
+              <span id="brightnessLabel">Brightness</span>
+              <span id="finalBrightnessVal">1.0</span>
+            </div>
+            <input type="range" class="brightness-slider" id="finalBrightness" min="0.5" max="2.0" step="0.05" value="1.0">
+          </div>
+
           <div class="result-btns">
+            <button class="btn-print" id="printBtn" onclick="printPhoto()">
+              <i class="fas fa-print"></i> Print
+            </button>
             <button class="btn-booth" onclick="backToBooth()">New Photo</button>
             <a href="/" class="btn-home">Home</a>
           </div>
@@ -663,6 +777,8 @@
   </div>
 
 </div>
+
+<div id="printArea" style="display:none;"></div>
 
 <div class="toast-container" id="toastContainer"></div>
 
@@ -705,10 +821,14 @@
     const cooldownBar = document.getElementById('cooldownBar');
     const initStatus = document.getElementById('initStatus');
     const backHomeBtn = document.getElementById('backHomeBtn');
+    const finalBrightness = document.getElementById('finalBrightness');
+    const finalBrightnessVal = document.getElementById('finalBrightnessVal');
+    const printBtn = document.getElementById('printBtn');
 
     const framesLabel = document.getElementById('framesLabel');
     const filterLabel = document.getElementById('filterLabel');
     const resultTitle = document.getElementById('resultTitle');
+    const brightnessLabel = document.getElementById('brightnessLabel');
     const retakeBtn = document.querySelector('.retake-btn');
     const finishBtn = document.querySelector('.finish-btn');
 
@@ -717,8 +837,21 @@
       currentFilter = 'none', liveAnimationId = null, mirrorCamera = true;
     let countdownSeconds = 5;
     let currentOrientation = 'landscape';
+    let enableLandscape = true;
+    let enablePortrait = true;
     const PORTRAIT_RATIO = 7.2 / 15;
     const LANDSCAPE_RATIO = 16 / 9;
+
+    let handDetectionEnabled = true;
+    let handDetectionReady = false;
+    let handDetectionActive = true;
+    let detectionFrameCount = 0;
+    let handDetectedStartTime = null;
+    const REQUIRED_DETECTION_DURATION = 2000;
+    let detectInterval = null;
+    let handsInstance = null;
+    let initAttempts = 0;
+    const MAX_INIT_ATTEMPTS = 10;
 
     const filters = [
       { id: 'none', name: 'Normal', css: 'none' },
@@ -741,14 +874,18 @@
         capture: 'Capture', retake: 'Retake', continue: 'Continue',
         yourPhotoReady: 'Your Photo is Ready',
         newPhoto: 'New Photo', home: 'Done',
-        cameraDenied: 'Camera access denied.', cameraNotReady: 'Camera is not ready.'
+        cameraDenied: 'Camera access denied.', cameraNotReady: 'Camera is not ready.',
+        brightness: 'Brightness', print: 'Print',
+        printing: 'Printing...', printSuccess: 'Photo sent to printer!', printFailed: 'Print failed: '
       },
       id: {
         frames: 'Bingkai', filter: 'Filter',
         capture: 'Ambil Foto', retake: 'Ulangi', continue: 'Lanjutkan',
         yourPhotoReady: 'Foto Anda Siap',
         newPhoto: 'Foto Baru', home: 'Selesai',
-        cameraDenied: 'Akses kamera ditolak.', cameraNotReady: 'Kamera belum siap.'
+        cameraDenied: 'Akses kamera ditolak.', cameraNotReady: 'Kamera belum siap.',
+        brightness: 'Kecerahan', print: 'Cetak',
+        printing: 'Mencetak...', printSuccess: 'Foto terkirim ke printer!', printFailed: 'Gagal mencetak: '
       }
     };
     let currentLang = 'en';
@@ -882,6 +1019,9 @@
         if (settings.countdown_seconds) countdownSeconds = parseInt(settings.countdown_seconds, 10) || 5;
         mirrorCamera = settings.mirror_camera !== 'false';
         if (settings.booth_orientation) currentOrientation = settings.booth_orientation;
+        handDetectionEnabled = settings.hand_detection !== 'false';
+        enableLandscape = settings.enable_landscape !== 'false';
+        enablePortrait = settings.enable_portrait !== 'false';
         applyLanguage();
         updateBackButtonText();
         updateOrientation(currentOrientation);
@@ -897,6 +1037,9 @@
     }
 
     function updateOrientation(orientation) {
+      if (!((orientation === 'landscape' && enableLandscape) || (orientation === 'portrait' && enablePortrait))) {
+        orientation = enableLandscape ? 'landscape' : (enablePortrait ? 'portrait' : 'landscape');
+      }
       currentOrientation = orientation;
       cameraWrapper.className = 'camera-stage ' + orientation;
       previewCanvasWrap.className = 'preview-canvas-wrap ' + orientation;
@@ -911,11 +1054,13 @@
       if (retakeBtn) retakeBtn.textContent = t('retake');
       if (finishBtn) finishBtn.textContent = t('continue');
       if (resultTitle) resultTitle.textContent = t('yourPhotoReady');
-      updateBackButtonText();
+      if (brightnessLabel) brightnessLabel.textContent = t('brightness');
+      if (printBtn) printBtn.innerHTML = `<i class="fas fa-print"></i> ${t('print')}`;
       const homeBtn = document.querySelector('.btn-home');
       if (homeBtn) homeBtn.textContent = t('home');
       const newPhotoBtn = document.querySelector('.btn-booth');
       if (newPhotoBtn) newPhotoBtn.textContent = t('newPhoto');
+      updateBackButtonText();
     }
 
     function disableCapture() { captureBtnInline.disabled = true; captureBtnSidebar.disabled = true; }
@@ -926,7 +1071,7 @@
       screens[name].classList.add('active');
       if (name === 'booth') {
         startLivePreview();
-        startHandDetection();
+        if (handDetectionEnabled) startHandDetection();
       } else {
         stopLivePreview();
         stopHandDetection();
@@ -949,7 +1094,9 @@
         await video.play();
         startLivePreview();
         updateFilterPreviews();
-        setTimeout(() => startHandDetection(), 300);
+        setTimeout(() => {
+          if (handDetectionEnabled) startHandDetection();
+        }, 300);
       } catch (err) { showToast(t('cameraDenied'), 'error'); }
     }
 
@@ -1155,13 +1302,16 @@
         const res = await fetch('/api/frames');
         const frames = await res.json();
         const activeFrames = frames.filter(f => f.active === 1);
-        const portraitFrames = activeFrames.filter(f => f.orientation === 'portrait');
-        const landscapeFrames = activeFrames.filter(f => f.orientation === 'landscape');
+        const portraitFrames = activeFrames.filter(f => f.orientation === 'portrait' && enablePortrait);
+        const landscapeFrames = activeFrames.filter(f => f.orientation === 'landscape' && enableLandscape);
 
-        frameList.innerHTML = `
-          <div class="frame-item none active landscape" data-frame-id="" data-orientation="landscape" onclick="selectFrame(this,'',null,'landscape')">No</div>
-          <div class="frame-item none portrait" data-frame-id="" data-orientation="portrait" onclick="selectFrame(this,'',null,'portrait')">No</div>
-        `;
+        frameList.innerHTML = '';
+        if (enableLandscape) {
+          frameList.innerHTML += `<div class="frame-item none landscape" data-frame-id="" data-orientation="landscape" onclick="selectFrame(this,'',null,'landscape')">No</div>`;
+        }
+        if (enablePortrait) {
+          frameList.innerHTML += `<div class="frame-item none portrait" data-frame-id="" data-orientation="portrait" onclick="selectFrame(this,'',null,'portrait')">No</div>`;
+        }
 
         [...landscapeFrames, ...portraitFrames].forEach(frame => {
           const div = document.createElement('div');
@@ -1172,10 +1322,28 @@
           div.innerHTML = `<img src="/frames/${frame.filename}" alt="${frame.name}"><span class="badge">${frame.orientation === 'landscape' ? '16:9' : '7:15'}</span>`;
           frameList.appendChild(div);
         });
+
+        if (!enableLandscape && !enablePortrait) {
+          frameList.innerHTML = '<div class="empty">No orientation enabled</div>';
+          currentOrientation = 'landscape';
+          updateOrientation(currentOrientation);
+        } else {
+          const firstOrientation = enableLandscape ? 'landscape' : 'portrait';
+          if (currentOrientation !== firstOrientation && !((currentOrientation === 'landscape' && enableLandscape) || (currentOrientation === 'portrait' && enablePortrait))) {
+            updateOrientation(firstOrientation);
+          }
+          const activeItem = frameList.querySelector(`.frame-item[data-orientation="${currentOrientation}"][data-frame-id=""]`);
+          if (activeItem) activeItem.classList.add('active');
+          else {
+            const anyItem = frameList.querySelector(`.frame-item[data-orientation="${currentOrientation}"]`);
+            if (anyItem) anyItem.classList.add('active');
+          }
+        }
       } catch (err) { console.error(err); }
     }
 
     window.selectFrame = function(el, id, url, orientation) {
+      if (!((orientation === 'landscape' && enableLandscape) || (orientation === 'portrait' && enablePortrait))) return;
       document.querySelectorAll('.frame-item').forEach(i => i.classList.remove('active'));
       el.classList.add('active');
       updateOrientation(orientation);
@@ -1221,7 +1389,7 @@
           enableCapture();
           handDetectionActive = true;
           detectionFrameCount = 0;
-          handDetectedFlag = false;
+          handDetectedStartTime = null;
           updateDetectionVisual('idle');
         } else {
           countdownNumber.textContent = count;
@@ -1299,7 +1467,7 @@
       if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
       handDetectionActive = true;
       detectionFrameCount = 0;
-      handDetectedFlag = false;
+      handDetectedStartTime = null;
       updateDetectionVisual('idle');
       introPlayed = false;
       showScreen('booth');
@@ -1389,6 +1557,61 @@
           qrUrlText.textContent = downloadUrl;
         }, 100);
       }
+      finalBrightness.value = 1.0;
+      finalBrightnessVal.textContent = '1.0';
+      updateResultPreview();
+    };
+
+    function updateResultPreview() {
+      if (!rawImageData) return;
+      const brightness = parseFloat(finalBrightness.value);
+      const img = new Image();
+      img.src = rawImageData;
+      img.onload = () => {
+        resultCanvas.width = img.width;
+        resultCanvas.height = img.height;
+        resultCtx.clearRect(0, 0, img.width, img.height);
+        resultCtx.filter = `brightness(${brightness})`;
+        resultCtx.drawImage(img, 0, 0);
+        resultCtx.filter = 'none';
+        if (currentFrame) resultCtx.drawImage(currentFrame, 0, 0, img.width, img.height);
+      };
+    }
+
+    finalBrightness.addEventListener('input', () => {
+      finalBrightnessVal.textContent = finalBrightness.value;
+      updateResultPreview();
+    });
+
+    window.printPhoto = function() {
+      if (!rawImageData) {
+        showToast('No image to print', 'error');
+        return;
+      }
+      playSound(getSoundKey('print'));
+
+      const finalCanvas = document.getElementById('resultCanvas');
+      const imageData = finalCanvas.toDataURL('image/png');
+
+      const printArea = document.getElementById('printArea');
+      
+      const img = new Image();
+      img.onload = function() {
+        printArea.innerHTML = '';
+        printArea.appendChild(img);
+        setTimeout(() => {
+          window.print();
+        }, 100);
+      };
+      img.onerror = function() {
+        showToast('Gagal menyiapkan gambar untuk dicetak', 'error');
+      };
+      img.src = imageData;
+
+      window.addEventListener('afterprint', () => {
+        printArea.style.display = 'none';
+        printArea.innerHTML = '';
+      }, { once: true });
     };
 
     window.backToBooth = function() {
@@ -1396,7 +1619,7 @@
       rawImageData = null;
       handDetectionActive = true;
       detectionFrameCount = 0;
-      handDetectedFlag = false;
+      handDetectedStartTime = null;
       if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
       countdownOverlay.style.display = 'none';
       updateDetectionVisual('idle');
@@ -1417,12 +1640,6 @@
       else initStatus.classList.remove('show');
       cooldownBar.classList.toggle('active', state === 'cooldown');
     }
-
-    let handDetectionActive = true, handDetectedFlag = false, detectionFrameCount = 0;
-    const REQUIRED_FRAMES = 3;
-    let detectInterval = null, handsInstance = null, lastFingerCount = 0;
-    let handDetectionReady = false, initAttempts = 0;
-    const MAX_INIT_ATTEMPTS = 10;
 
     function loadHandsScript() {
       return new Promise((resolve, reject) => {
@@ -1517,7 +1734,7 @@
     }
 
     function onHandResults(results) {
-      if (!handDetectionActive || countdownTimer || !handDetectionReady) return;
+      if (!handDetectionEnabled || !handDetectionActive || countdownTimer || !handDetectionReady) return;
 
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
@@ -1536,30 +1753,31 @@
         if (thumbExtended) openCount++;
 
         if (openCount === 5) {
-          detectionFrameCount++;
-          if (detectionFrameCount >= REQUIRED_FRAMES && !handDetectedFlag) {
-            handDetectedFlag = true;
-            handDetectionActive = false;
-            updateDetectionVisual('detected');
-            startCountdown();
-            setTimeout(() => {
-              handDetectionActive = true;
-              detectionFrameCount = 0;
-              handDetectedFlag = false;
-              if (!countdownTimer) updateDetectionVisual('idle');
-            }, 4000);
+          if (handDetectedStartTime === null) {
+            handDetectedStartTime = Date.now();
+          } else {
+            const elapsed = Date.now() - handDetectedStartTime;
+            if (elapsed >= REQUIRED_DETECTION_DURATION) {
+              handDetectionActive = false;
+              updateDetectionVisual('detected');
+              startCountdown();
+              setTimeout(() => {
+                handDetectionActive = true;
+                handDetectedStartTime = null;
+                if (!countdownTimer) updateDetectionVisual('idle');
+              }, 4000);
+            }
           }
         } else {
-          detectionFrameCount = Math.max(0, detectionFrameCount - 1);
-          handDetectedFlag = false;
+          handDetectedStartTime = null;
         }
       } else {
-        detectionFrameCount = Math.max(0, detectionFrameCount - 2);
-        handDetectedFlag = false;
+        handDetectedStartTime = null;
       }
     }
 
     function startHandDetection() {
+      if (!handDetectionEnabled) return;
       if (!handDetectionReady) { if (!handsInstance) initHandDetection(); return; }
       if (detectInterval) return;
       if (video.readyState < 2) { setTimeout(startHandDetection, 200); return; }
@@ -1572,8 +1790,7 @@
 
     function stopHandDetection() {
       if (detectInterval) { clearInterval(detectInterval); detectInterval = null; }
-      detectionFrameCount = 0;
-      handDetectedFlag = false;
+      handDetectedStartTime = null;
     }
 
     updateDetectionVisual('loading');
@@ -1582,14 +1799,17 @@
     loadSettings().then(() => {
       initCamera();
       loadFrames();
-      loadHandsScript().then(() => {
-        initHandDetection();
-      }).catch(() => {
-        updateDetectionVisual('error');
-      });
-
+      if (handDetectionEnabled) {
+        loadHandsScript().then(() => {
+          initHandDetection();
+        }).catch(() => {
+          updateDetectionVisual('error');
+        });
+      } else {
+        updateDetectionVisual('idle');
+      }
       const waitForReady = setInterval(() => {
-        if (video.videoWidth > 0 && handDetectionReady) {
+        if (video.videoWidth > 0 && (!handDetectionEnabled || handDetectionReady)) {
           clearInterval(waitForReady);
           playIntroSound();
         }
@@ -1601,20 +1821,20 @@
     });
 
     video.addEventListener('loadeddata', () => {
-      if (handDetectionReady) startHandDetection();
+      if (handDetectionEnabled && handDetectionReady) startHandDetection();
       updateFilterPreviews();
     });
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && screens.booth.classList.contains('active')) {
-        if (handDetectionReady && !detectInterval) startHandDetection();
+        if (handDetectionEnabled && handDetectionReady && !detectInterval) startHandDetection();
       }
     });
 
     window.addEventListener('error', (e) => {
       if (e.message && e.message.includes('Hands')) {
         console.warn('Hand detection error, retrying...');
-        if (!handsInstance) initHandDetection();
+        if (!handsInstance && handDetectionEnabled) initHandDetection();
       }
     });
 

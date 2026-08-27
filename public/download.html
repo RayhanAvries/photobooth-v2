@@ -1,376 +1,549 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Download Photo | Kidversa Studio</title>
-  <link rel="icon" href="icon.png" type="image/png">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    :root {
-      --purple: #5c2e8a;
-      --purple-dark: #4a2372;
-      --orange: #f09822;
-      --white: #ffffff;
-      --gray-50: #fafafa;
-      --gray-100: #f5f5f5;
-      --gray-200: #e5e5e5;
-      --gray-400: #9ca3af;
-      --gray-500: #6b7280;
-      --gray-700: #374151;
-      --gray-900: #111827;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
-      --shadow: 0 4px 16px rgba(0,0,0,0.06);
-      --shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
-      --radius: 16px;
-      --radius-lg: 24px;
-      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #f8f9fb;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: manipulation;
-      padding: 16px;
-    }
-    .download-container {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      width: 100%;
-      max-width: 480px;
-      height: 100%;
-      max-height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 20px;
-      position: relative;
-      overflow: hidden;
-    }
-    .download-container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--purple), var(--orange));
-    }
-    .logo {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 10px;
-      box-shadow: 0 8px 20px rgba(92,46,138,0.15);
-    }
-    h1 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: var(--gray-900);
-      letter-spacing: -0.5px;
-    }
-    h1 span { color: var(--purple); }
-    .subtitle {
-      font-size: 0.8rem;
-      color: var(--gray-500);
-      margin-bottom: 16px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-    }
-    .photo-wrap {
-      flex: 1;
-      min-height: 0;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-    #photoImage {
-      max-width: 100%;
-      max-height: 55vh;
-      object-fit: contain;
-      border-radius: 8px;
-      display: block;
-    }
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      width: 100%;
-      margin-bottom: 14px;
-    }
-    .btn {
-      flex: 1;
-      min-width: 120px;
-      padding: 13px 16px;
-      border-radius: 60px;
-      border: none;
-      font-weight: 700;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 0.82rem;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all var(--transition);
-      letter-spacing: 0.3px;
-    }
-    .btn-download {
-      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
-      color: white;
-      box-shadow: 0 6px 18px rgba(92,46,138,0.25);
-    }
-    .btn-download:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(92,46,138,0.35); }
-    .btn-copy {
-      background: var(--white);
-      color: var(--purple);
-      border: 2px solid var(--purple);
-    }
-    .btn-copy:hover { background: var(--purple); color: white; }
-    .btn:active { transform: scale(0.96); }
-    .social-links {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      width: 100%;
-    }
-    .social-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 16px;
-      border-radius: 60px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.78rem;
-      transition: all var(--transition);
-    }
-    .social-link.instagram {
-      background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-      color: white;
-      box-shadow: 0 4px 14px rgba(220,39,67,0.2);
-    }
-    .social-link.instagram:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(220,39,67,0.3); }
-    .social-link.website {
-      background: var(--gray-100);
-      color: var(--gray-700);
-      border: 1px solid var(--gray-200);
-    }
-    .social-link.website:hover { background: var(--gray-200); transform: translateY(-2px); }
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-    .modal-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .modal-box {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      width: 100%;
-      max-width: 420px;
-      padding: 40px 24px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.3);
-      animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal-close {
-      position: absolute;
-      top: 12px;
-      right: 16px;
-      background: none;
-      border: none;
-      font-size: 1.8rem;
-      color: var(--gray-400);
-      cursor: pointer;
-      transition: color var(--transition);
-      line-height: 1;
-    }
-    .modal-close:hover { color: var(--gray-900); }
-    .modal-icon {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 16px;
-      border-radius: 50%;
-      background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      color: white;
-      box-shadow: 0 10px 30px rgba(220,39,67,0.3);
-    }
-    .modal-box h2 {
-      font-size: 1.3rem;
-      font-weight: 800;
-      color: var(--gray-900);
-      margin-bottom: 8px;
-    }
-    .modal-box p {
-      font-size: 0.9rem;
-      color: var(--gray-500);
-      margin-bottom: 24px;
-      line-height: 1.5;
-    }
-    .btn-instagram {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 16px 28px;
-      border-radius: 60px;
-      background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-      color: white;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      transition: all var(--transition);
-      box-shadow: 0 8px 24px rgba(220,39,67,0.3);
-    }
-    .btn-instagram:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(220,39,67,0.4); }
-    @media (max-width: 400px) {
-      .download-container { padding: 16px 14px; }
-      .actions { flex-direction: column; }
-      .btn { width: 100%; }
-      .social-links { flex-direction: column; }
-      .social-link { justify-content: center; width: 100%; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Download Photo | Kidversa Studio</title>
+    <link rel="icon" href="icon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --purple: #6d28d9;
+            --purple-light: #8b5cf6;
+            --purple-dark: #4c1d95;
+            --orange: #f59e0b;
+            --pink: #ec4899;
+            --cyan: #06b6d4;
+            --white: #ffffff;
+            --gray-100: #f4f4f5;
+            --gray-200: #e4e4e7;
+            --gray-400: #a1a1aa;
+            --gray-500: #71717a;
+            --gray-700: #3f3f46;
+            --gray-900: #18181b;
+            --shadow: 0 8px 24px rgba(0,0,0,0.08);
+            --radius-lg: 24px;
+            --transition: 0.3s ease;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        html, body { height: 100%; width: 100%; overflow: hidden; overscroll-behavior: none; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            padding: 12px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .download-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 4px;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        .logo-wrapper { margin-bottom: 6px; }
+        .logo {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+
+        h1 {
+            font-size: clamp(1.1rem, 3vw, 1.3rem);
+            font-weight: 800;
+            color: var(--gray-900);
+            text-align: center;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+        h1 .accent { color: var(--purple); }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .subtitle .dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: #10b981;
+        }
+
+        .photo-wrap {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .photo-frame {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border-radius: 0;
+            overflow: hidden;
+        }
+
+        .photo-frame::before {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg,
+                transparent 30%,
+                rgba(255,255,255,0.4) 40%,
+                rgba(255,255,255,0.5) 45%,
+                rgba(255,255,255,0.4) 50%,
+                transparent 60%);
+            animation: frameShine 5s ease-in-out infinite;
+            z-index: 2;
+            pointer-events: none;
+        }
+        @keyframes frameShine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        #photoImage {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: transparent;
+            position: relative;
+            z-index: 1;
+            max-height: 60vh;
+            margin: 0 auto;
+        }
+
+        .photo-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .spinner {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--purple);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Tombol aksi - lebih besar dan tidak melebar penuh */
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 0 8px;
+        }
+        .btn {
+            flex: 1 1 auto;
+            min-width: 140px;
+            max-width: 200px;   /* batas lebar agar tidak melebar penuh */
+            padding: 14px 22px;
+            border-radius: 60px;
+            border: none;
+            font-weight: 700;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            letter-spacing: 0.3px;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -100%;
+            width: 50%;
+            height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            animation: btnShine 4s ease-in-out infinite;
+            z-index: -1;
+        }
+        @keyframes btnShine {
+            0% { left: -100%; }
+            40%, 100% { left: 150%; }
+        }
+        .btn-download {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+            color: white;
+            box-shadow: 0 6px 16px rgba(109,40,217,0.25);
+        }
+        .btn-copy {
+            background: var(--white);
+            color: var(--purple);
+            border: 2px solid var(--purple);
+        }
+        .btn-copy::before {
+            background: linear-gradient(90deg, transparent, rgba(109,40,217,0.1), transparent);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            width: 100%;
+            flex-wrap: wrap;
+            padding: 0 8px;
+        }
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 60px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.75rem;
+            flex: 1 1 auto;
+            max-width: 160px;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .social-link.instagram {
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+            color: white;
+        }
+        .social-link.website {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 1000; padding: 16px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            width: 100%; max-width: 350px;
+            padding: 24px 18px 18px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .modal-close {
+            position: absolute; top: 8px; right: 12px;
+            background: none; border: none;
+            font-size: 1.4rem; color: var(--gray-400); cursor: pointer;
+        }
+        .modal-icon {
+            width: 48px; height: 48px; margin: 0 auto 12px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: white;
+        }
+        .modal-box h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+        .modal-box p { font-size: 0.85rem; color: var(--gray-500); margin-bottom: 18px; }
+        .btn-instagram {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 18px; border-radius: 60px;
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+            color: white; text-decoration: none; font-weight: 700; font-size: 0.8rem;
+        }
+        .toast {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 60px;
+            padding: 10px 20px;
+            color: var(--gray-900);
+            font-weight: 600; font-size: 0.8rem;
+            display: flex; align-items: center; gap: 8px;
+            z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            transition: transform 0.4s ease;
+            pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Responsif: tombol tetap besar tapi tidak full width */
+        @media (max-width: 480px) {
+            body { padding: 4px; }
+            .download-container { padding: 6px 2px; }
+            .logo { width: 34px; height: 34px; }
+            h1 { font-size: 1rem; }
+            .subtitle { font-size: 0.68rem; margin-bottom: 4px; }
+            .photo-wrap { margin-bottom: 4px; }
+            #photoImage { max-height: 50vh; }
+            .actions {
+                gap: 10px;
+                margin-bottom: 6px;
+                padding: 0 4px;
+                justify-content: center;
+            }
+            .btn {
+                flex: 1 1 auto;
+                min-width: 120px;
+                max-width: 170px;   /* tetap tidak full width */
+                padding: 12px 16px;
+                font-size: 0.85rem;
+            }
+            .social-links {
+                gap: 6px;
+                padding: 0 4px;
+                justify-content: center;
+            }
+            .social-link {
+                flex: 1 1 auto;
+                max-width: 140px;
+                padding: 7px 12px;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .download-container { padding: 4px 0; }
+            .logo { width: 30px; height: 30px; }
+            h1 { font-size: 0.95rem; }
+            #photoImage { max-height: 45vh; }
+            .btn {
+                min-width: 110px;
+                max-width: 150px;
+                padding: 10px 14px;
+                font-size: 0.8rem;
+            }
+            .social-link {
+                max-width: 120px;
+                padding: 6px 10px;
+                font-size: 0.65rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="download-container">
-    <img src="icon.png" alt="Kidversa Logo" class="logo" onerror="this.style.display='none'">
-    <h1>Kidversa <span>Studio</span></h1>
-    <p class="subtitle">Your photo is ready</p>
-    <div class="photo-wrap">
-      <img id="photoImage" src="" alt="Your Photo">
+    <div class="download-container" role="main" aria-label="Photo download page">
+        <!-- shine-bar dihapus -->
+
+        <div class="logo-wrapper">
+            <img src="icon.png" alt="Kidversa Studio Logo" class="logo" onerror="this.style.display='none'">
+        </div>
+
+        <h1>Kidversa <span class="accent">Studio</span></h1>
+        <p class="subtitle"><span class="dot"></span> Your photo is ready to download</p>
+
+        <div class="photo-wrap">
+            <div class="photo-frame">
+                <div class="photo-placeholder" id="photoPlaceholder">
+                    <div class="spinner"></div>
+                </div>
+                <img id="photoImage" src="" alt="Your Photo" style="display: none;">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-download" id="downloadBtn" aria-label="Download photo">
+                <i class="fas fa-download"></i> Download
+            </button>
+            <button class="btn btn-copy" id="copyBtn" aria-label="Copy link">
+                <i class="fas fa-link"></i> Copy Link
+            </button>
+        </div>
+
+        <div class="social-links">
+            <a href="https://instagram.com/kidversa" target="_blank" rel="noopener noreferrer" class="social-link instagram" id="instagramLink">
+                <i class="fab fa-instagram"></i> Instagram
+            </a>
+            <a href="https://kidversa.fun" target="_blank" rel="noopener noreferrer" class="social-link website" id="websiteLink">
+                <i class="fas fa-globe"></i> Website
+            </a>
+        </div>
     </div>
-    <div class="actions">
-      <button class="btn btn-download" id="downloadBtn"><i class="fas fa-download"></i> Download</button>
-      <button class="btn btn-copy" id="copyBtn"><i class="fas fa-link"></i> Copy Link</button>
+
+    <!-- Modal & Toast tetap sama -->
+    <div class="modal-overlay" id="followModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-box">
+            <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+            <div class="modal-icon" aria-hidden="true"><i class="fab fa-instagram"></i></div>
+            <h2 id="modalTitle">Follow Kidversa Studio</h2>
+            <p>Stay updated with our latest creations, exclusive offers, and behind-the-scenes content.</p>
+            <a href="https://instagram.com/kidversa" target="_blank" rel="noopener noreferrer" class="btn-instagram" id="modalInstagramBtn">
+                <i class="fab fa-instagram"></i> Follow @kidversa
+            </a>
+        </div>
     </div>
-    <div class="social-links">
-      <a href="https://instagram.com/kidversa" target="_blank" class="social-link instagram" id="instagramLink">
-        <i class="fab fa-instagram"></i> Instagram
-      </a>
-      <a href="https://kidversa.fun" target="_blank" class="social-link website" id="websiteLink">
-        <i class="fas fa-globe"></i> Website
-      </a>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+        <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
+        <span id="toastMessage">Link copied!</span>
     </div>
-  </div>
 
-  <div class="modal-overlay" id="followModal">
-    <div class="modal-box">
-      <button class="modal-close" id="modalClose">&times;</button>
-      <div class="modal-icon"><i class="fab fa-instagram"></i></div>
-      <h2>Follow Kidversa Studio</h2>
-      <p>Stay updated with our latest creations and special offers.</p>
-      <a href="https://instagram.com/kidversa" target="_blank" class="btn-instagram" id="modalInstagramBtn">
-        <i class="fab fa-instagram"></i> Follow @kidversa
-      </a>
-    </div>
-  </div>
+    <script>
+        (function() {
+            const filename = window.location.pathname.split('/').pop();
+            let currentPhotoUrl = '';
+            let currentDownloadUrl = '';
 
-  <script>
-    const filename = window.location.pathname.split('/').pop();
-    let currentPhotoUrl = '';
-    let currentDownloadUrl = '';
+            function fireConfetti(mode = 'normal') {
+                const colors = ['#6d28d9', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4', '#fbbf24', '#a78bfa'];
+                if (mode === 'massive') {
+                    confetti({ particleCount: 70, angle: 60, spread: 70, origin: { x: 0, y: 0.7 }, colors, zIndex: 3000 });
+                    confetti({ particleCount: 70, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors, zIndex: 3000 });
+                } else {
+                    confetti({ particleCount: 25, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors, zIndex: 3000 });
+                    confetti({ particleCount: 25, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors, zIndex: 3000 });
+                }
+            }
 
-    async function loadPhoto() {
-      try {
-        const res = await fetch(`/api/photo/${encodeURIComponent(filename)}`);
-        if (!res.ok) throw new Error('Photo not found');
-        const photo = await res.json();
-        const photoImage = document.getElementById('photoImage');
-        photoImage.src = `/photos/${photo.filename}`;
-        currentPhotoUrl = `/photos/${photo.filename}`;
-        currentDownloadUrl = window.location.origin + `/api/download/${photo.filename}`;
-      } catch (err) {
-        console.error('Error loading photo:', err);
-        document.getElementById('photoImage').alt = 'Photo not found';
-      }
-    }
+            async function loadPhoto() {
+                const photoImage = document.getElementById('photoImage');
+                const placeholder = document.getElementById('photoPlaceholder');
+                try {
+                    const res = await fetch(`/api/photo/${encodeURIComponent(filename)}`);
+                    if (!res.ok) throw new Error('Photo not found');
+                    const photo = await res.json();
+                    photoImage.src = `/photos/${photo.filename}`;
+                    currentPhotoUrl = `/photos/${photo.filename}`;
+                    currentDownloadUrl = window.location.origin + `/api/download/${photo.filename}`;
 
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/settings');
-        const settings = await res.json();
-        const instagramUrl = settings.instagram_url || 'https://instagram.com/kidversa';
-        const websiteUrl = settings.website_url || 'https://kidversa.fun';
-        document.getElementById('instagramLink').href = instagramUrl;
-        document.getElementById('websiteLink').href = websiteUrl;
-        document.getElementById('modalInstagramBtn').href = instagramUrl;
-      } catch (err) {
-        console.error('Error loading settings:', err);
-      }
-    }
+                    photoImage.onload = () => {
+                        photoImage.style.display = 'block';
+                        if (placeholder) placeholder.style.display = 'none';
+                        setTimeout(() => fireConfetti('normal'), 300);
+                    };
 
-    function showFollowModal() {
-      document.getElementById('followModal').classList.add('show');
-    }
+                    photoImage.onerror = () => {
+                        if (placeholder) placeholder.innerHTML = '';
+                        photoImage.alt = 'Photo not found';
+                    };
+                } catch (err) {
+                    console.error('Error loading photo:', err);
+                    if (placeholder) placeholder.innerHTML = '';
+                    photoImage.alt = 'Photo not found';
+                }
+            }
 
-    function hideFollowModal() {
-      document.getElementById('followModal').classList.remove('show');
-    }
+            async function loadSettings() {
+                try {
+                    const res = await fetch('/api/settings');
+                    if (!res.ok) return;
+                    const settings = await res.json();
+                    const instagramUrl = settings.instagram_url || 'https://instagram.com/kidversa';
+                    const websiteUrl = settings.website_url || 'https://kidversa.fun';
+                    document.getElementById('instagramLink').href = instagramUrl;
+                    document.getElementById('websiteLink').href = websiteUrl;
+                    document.getElementById('modalInstagramBtn').href = instagramUrl;
+                } catch (err) {
+                    console.error('Error loading settings:', err);
+                }
+            }
 
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      if (currentDownloadUrl) {
-        const a = document.createElement('a');
-        a.href = currentDownloadUrl;
-        a.download = `Kidversa_Studio_${filename}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        showFollowModal();
-      }
-    });
+            const followModal = document.getElementById('followModal');
+            function showFollowModal() { followModal.classList.add('show'); document.body.style.overflow = 'hidden'; }
+            function hideFollowModal() { followModal.classList.remove('show'); document.body.style.overflow = ''; }
 
-    document.getElementById('copyBtn').addEventListener('click', async () => {
-      if (currentPhotoUrl) {
-        const fullUrl = window.location.origin + currentPhotoUrl;
-        try {
-          await navigator.clipboard.writeText(fullUrl);
-        } catch (err) {
-          const input = document.createElement('input');
-          input.value = fullUrl;
-          document.body.appendChild(input);
-          input.select();
-          document.execCommand('copy');
-          document.body.removeChild(input);
-        }
-        showFollowModal();
-      }
-    });
+            document.getElementById('modalClose')?.addEventListener('click', (e) => { e.stopPropagation(); hideFollowModal(); });
+            followModal?.addEventListener('click', (e) => { if (e.target === e.currentTarget) hideFollowModal(); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideFollowModal(); });
 
-    document.getElementById('modalClose').addEventListener('click', hideFollowModal);
-    document.getElementById('followModal').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) hideFollowModal();
-    });
+            let toastTimeout;
+            function showToast(message, iconClass = 'fas fa-check-circle') {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toastMessage');
+                const toastIcon = toast?.querySelector('.toast-icon i');
+                if (!toast || !toastMessage) return;
+                toastMessage.textContent = message;
+                if (toastIcon) toastIcon.className = iconClass;
+                toast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
+            }
 
-    loadPhoto();
-    loadSettings();
-  </script>
+            document.getElementById('downloadBtn')?.addEventListener('click', () => {
+                if (currentDownloadUrl) {
+                    const a = document.createElement('a');
+                    a.href = currentDownloadUrl;
+                    a.download = `Kidversa_Studio_${filename}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    fireConfetti('massive');
+                    showToast('Downloading your photo...', 'fas fa-download');
+                    setTimeout(showFollowModal, 600);
+                } else {
+                    showToast('Photo is still loading...', 'fas fa-clock');
+                }
+            });
+
+            document.getElementById('copyBtn')?.addEventListener('click', async () => {
+                const fullUrl = window.location.origin + '/download/' + filename;
+                try {
+                    await navigator.clipboard.writeText(fullUrl);
+                    showToast('Link copied to clipboard!', 'fas fa-link');
+                } catch (err) {
+                    const input = document.createElement('input');
+                    input.value = fullUrl;
+                    document.body.appendChild(input);
+                    input.select();
+                    try { document.execCommand('copy'); showToast('Link copied!', 'fas fa-check'); }
+                    catch (e2) { showToast('Failed to copy link', 'fas fa-times-circle'); }
+                    document.body.removeChild(input);
+                }
+                setTimeout(showFollowModal, 800);
+            });
+
+            loadPhoto();
+            loadSettings();
+        })();
+    </script>
 </body>
 </html>

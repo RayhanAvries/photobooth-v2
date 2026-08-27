@@ -58,6 +58,8 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('booth_orientation', 'landscape');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('enable_landscape', 'true');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('enable_portrait', 'true');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('enable_print', 'true');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('enable_brightness', 'true');
 `);
 
 const tableInfo = db.prepare("PRAGMA table_info(frames)").all();

@@ -223,8 +223,8 @@
 
     .frame-item {
       flex-shrink: 0;
-      width: 72px;
-      height: 44px;
+      width: 84px;
+      height: 52px;
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: all var(--transition);
@@ -234,7 +234,7 @@
       position: relative;
       touch-action: manipulation;
     }
-    .frame-item.portrait { width: 38px; height: 72px; }
+    .frame-item.portrait { width: 50px; height: 94px; }
     .frame-item:hover { border-color: var(--purple); transform: translateY(-2px); }
     .frame-item.active { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(92,46,138,0.2); }
     .frame-item img { width: 100%; height: 100%; object-fit: cover; }
@@ -251,11 +251,15 @@
       position: absolute;
       bottom: 2px;
       right: 2px;
-      font-size: 0.5rem;
-      padding: 2px 4px;
+      font-size: 0.45rem;
+      padding: 2px 3px;
       border-radius: 4px;
       background: rgba(0,0,0,0.7);
       color: white;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .filter-grid {
@@ -619,13 +623,47 @@
     .toast.success { background: #065f46; }
     .toast.error { background: #7f1d1d; }
 
+    /* ===== PERBESAR FRAME DI MODE PORTRAIT ===== */
     @media (orientation: portrait) {
+      .camera-stage.portrait {
+        height: auto;
+        width: 70%;
+        max-width: 70vw;
+        max-height: 45vh; /* dikurangi agar sidebar lebih lega */
+        max-width: min(70vw, calc(45vh * 7.2 / 15));
+        aspect-ratio: 7.2 / 15;
+      }
+      .camera-stage.landscape {
+        max-height: 45vh;
+      }
+
+      /* Sidebar diberi ruang lebih tinggi agar frame besar tidak terpotong */
+      .sidebar {
+        max-height: 55vh;
+      }
+
+      /* Frame list diperbesar agar lebih mudah disentuh */
       .frame-list-wrapper { overflow-x: auto; justify-content: flex-start; }
-      .frame-list { flex-wrap: nowrap; width: max-content; margin: 0 auto; }
+      .frame-list { flex-wrap: nowrap; width: max-content; margin: 0 auto; gap: 16px; }
       .filter-grid-wrapper { overflow-x: auto; justify-content: flex-start; }
       .filter-grid { display: flex; flex-wrap: nowrap; width: max-content; margin: 0 auto; gap: 10px; }
       .filter-item { flex-shrink: 0; width: 70px; }
       .filter-name { font-size: 0.55rem; }
+
+      /* UKURAN FRAME ITEM SANGAT BESAR */
+      .frame-item {
+        width: 180px;
+        height: 101px;
+      }
+      .frame-item.portrait {
+        width: 95px;
+        height: 200px;
+      }
+      .frame-item .badge {
+        font-size: 0.75rem;
+        max-width: 95%;
+        padding: 3px 5px;
+      }
     }
 
     @page {
@@ -756,7 +794,7 @@
             <p class="qr-url" id="qrUrlText"></p>
           </div>
 
-          <div class="brightness-section">
+          <div class="brightness-section" id="brightnessSection">
             <div class="brightness-label">
               <span id="brightnessLabel">Brightness</span>
               <span id="finalBrightnessVal">1.0</span>
@@ -824,6 +862,7 @@
     const finalBrightness = document.getElementById('finalBrightness');
     const finalBrightnessVal = document.getElementById('finalBrightnessVal');
     const printBtn = document.getElementById('printBtn');
+    const brightnessSection = document.getElementById('brightnessSection');
 
     const framesLabel = document.getElementById('framesLabel');
     const filterLabel = document.getElementById('filterLabel');
@@ -839,6 +878,8 @@
     let currentOrientation = 'landscape';
     let enableLandscape = true;
     let enablePortrait = true;
+    let enablePrint = true;
+    let enableBrightness = true;
     const PORTRAIT_RATIO = 7.2 / 15;
     const LANDSCAPE_RATIO = 16 / 9;
 
@@ -1022,11 +1063,27 @@
         handDetectionEnabled = settings.hand_detection !== 'false';
         enableLandscape = settings.enable_landscape !== 'false';
         enablePortrait = settings.enable_portrait !== 'false';
+        enablePrint = settings.enable_print !== 'false';
+        enableBrightness = settings.enable_brightness !== 'false';
         applyLanguage();
         updateBackButtonText();
         updateOrientation(currentOrientation);
+        applyFeatureToggles();
         await preloadAllSounds();
       } catch (e) { console.error('Failed to load settings:', e); applyLanguage(); }
+    }
+
+    function applyFeatureToggles() {
+      if (!enablePrint) {
+        printBtn.style.display = 'none';
+      } else {
+        printBtn.style.display = '';
+      }
+      if (!enableBrightness) {
+        brightnessSection.style.display = 'none';
+      } else {
+        brightnessSection.style.display = '';
+      }
     }
 
     function updateBackButtonText() {
@@ -1077,19 +1134,30 @@
         stopHandDetection();
       }
       if (name === 'result') applyLanguage();
+      applyFeatureToggles();
     }
 
     async function initCamera() {
       try {
         if (stream) stream.getTracks().forEach(t => t.stop());
-        const targetRatio = currentOrientation === 'landscape' ? LANDSCAPE_RATIO : PORTRAIT_RATIO;
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: currentOrientation === 'landscape' ? 1280 : 480 },
-            height: { ideal: currentOrientation === 'landscape' ? 720 : 1000 },
-            aspectRatio: { ideal: targetRatio }
-          }
-        });
+        let constraints;
+        if (currentOrientation === 'landscape') {
+          constraints = {
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              aspectRatio: { ideal: LANDSCAPE_RATIO }
+            }
+          };
+        } else {
+          constraints = {
+            video: {
+              width: { ideal: 720 },
+              height: { ideal: 1280 }
+            }
+          };
+        }
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
         await video.play();
         startLivePreview();
@@ -1319,7 +1387,7 @@
           div.dataset.frameId = frame.id;
           div.dataset.orientation = frame.orientation;
           div.onclick = () => selectFrame(div, frame.id, `/frames/${frame.filename}`, frame.orientation);
-          div.innerHTML = `<img src="/frames/${frame.filename}" alt="${frame.name}"><span class="badge">${frame.orientation === 'landscape' ? '16:9' : '7:15'}</span>`;
+          div.innerHTML = `<img src="/frames/${frame.filename}" alt="${frame.name}"><span class="badge">${frame.name}</span>`;
           frameList.appendChild(div);
         });
 
@@ -1560,6 +1628,7 @@
       finalBrightness.value = 1.0;
       finalBrightnessVal.textContent = '1.0';
       updateResultPreview();
+      applyFeatureToggles();
     };
 
     function updateResultPreview() {

@@ -325,6 +325,28 @@
 
         <hr class="settings-divider">
 
+        <h4>Print & Brightness</h4>
+        <div class="setting-row">
+          <label for="enablePrintToggle">Enable Print Button:</label>
+          <label class="switch-compact">
+            <input type="checkbox" id="enablePrintToggle" onchange="handlePrintToggle(this.checked)">
+            <span class="slider"></span>
+            <span class="label-text"><span class="off">Off</span><span class="on">On</span></span>
+          </label>
+          <span class="save-indicator" id="saveEnablePrintIndicator">Saved!</span>
+        </div>
+        <div class="setting-row">
+          <label for="enableBrightnessToggle">Enable Brightness Slider:</label>
+          <label class="switch-compact">
+            <input type="checkbox" id="enableBrightnessToggle" onchange="handleBrightnessToggle(this.checked)">
+            <span class="slider"></span>
+            <span class="label-text"><span class="off">Off</span><span class="on">On</span></span>
+          </label>
+          <span class="save-indicator" id="saveEnableBrightnessIndicator">Saved!</span>
+        </div>
+
+        <hr class="settings-divider">
+
         <h4>Social Media Links</h4>
         <div class="setting-row">
           <label for="instagramUrl">Instagram URL:</label>
@@ -439,6 +461,14 @@
         indicator.classList.add('show');
         setTimeout(() => indicator.classList.remove('show'), 2000);
       }
+    }
+
+    async function handlePrintToggle(checked) {
+      await saveSetting('enable_print', checked ? 'true' : 'false');
+    }
+
+    async function handleBrightnessToggle(checked) {
+      await saveSetting('enable_brightness', checked ? 'true' : 'false');
     }
 
     function switchTab(tab) {
@@ -681,12 +711,28 @@
         enableLandscapeToggle.checked = settings.enable_landscape !== 'false';
         const enablePortraitToggle = document.getElementById('enablePortraitToggle');
         enablePortraitToggle.checked = settings.enable_portrait !== 'false';
+        const enablePrintToggle = document.getElementById('enablePrintToggle');
+        enablePrintToggle.checked = settings.enable_print !== 'false';
+        const enableBrightnessToggle = document.getElementById('enableBrightnessToggle');
+        enableBrightnessToggle.checked = settings.enable_brightness !== 'false';
         updateAdminPreviewOrientation();
       } catch (e) { console.error(e); }
     }
 
     async function saveSetting(key, value) {
-      const indicatorMap = { 'language': 'saveLangIndicator', 'booth_orientation': 'saveOrientationIndicator', 'countdown_seconds': 'saveCountdownIndicator', 'mirror_camera': 'saveMirrorIndicator', 'hand_detection': 'saveHandDetectionIndicator', 'instagram_url': 'saveInstagramIndicator', 'website_url': 'saveWebsiteIndicator', 'enable_landscape': 'saveEnableLandscapeIndicator', 'enable_portrait': 'saveEnablePortraitIndicator' };
+      const indicatorMap = { 
+        'language': 'saveLangIndicator', 
+        'booth_orientation': 'saveOrientationIndicator', 
+        'countdown_seconds': 'saveCountdownIndicator', 
+        'mirror_camera': 'saveMirrorIndicator', 
+        'hand_detection': 'saveHandDetectionIndicator', 
+        'instagram_url': 'saveInstagramIndicator', 
+        'website_url': 'saveWebsiteIndicator', 
+        'enable_landscape': 'saveEnableLandscapeIndicator', 
+        'enable_portrait': 'saveEnablePortraitIndicator',
+        'enable_print': 'saveEnablePrintIndicator',
+        'enable_brightness': 'saveEnableBrightnessIndicator'
+      };
       const indicator = document.getElementById(indicatorMap[key]);
       try {
         await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value }) });
